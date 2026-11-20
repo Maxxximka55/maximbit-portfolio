@@ -1,0 +1,731 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CASE 07 — Выбор способа оплаты в Telegram-боте: матрица решения</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F5F2EB;--surface:#fff;--alt:#EAE5DA;--ink:#141619;--muted:#494F57;--line:#D2CCC0;--accent:#C93B17;--ok:#136F43;--ok-soft:#E5F5EC;--warn:#8A5A00;--warn-soft:#FFF4D6;--bad:#A3220E;--bad-soft:#FCECE7;
+--display:'Unbounded',system-ui,sans-serif;--sans:'Golos Text',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.5}
+button:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.top{border-bottom:1px solid var(--ink)}.top-in{max-width:1120px;margin:0 auto;padding:12px 20px;display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap;font:13px var(--mono)}
+.back{color:var(--ink);font-weight:700;text-decoration:none}.back:hover{color:var(--accent)}
+main{max-width:1120px;margin:0 auto;padding:36px 20px}
+h1{font:700 clamp(22px,3.4vw,34px)/1.15 var(--display);letter-spacing:-.02em;margin-bottom:12px}
+.lead{color:var(--muted);max-width:68ch;margin-bottom:18px}
+.news{background:var(--warn-soft);border:1.5px solid var(--ink);border-radius:10px;padding:14px 16px;font-size:14px;max-width:80ch;margin-bottom:22px}
+.news b{font:700 12px var(--mono)}
+.bar{display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
+.seg{display:inline-flex;border:1.5px solid var(--ink);border-radius:8px;overflow:hidden}
+.seg button{font:600 14px var(--sans);padding:10px 16px;border:0;background:var(--surface);color:var(--ink);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.tw{overflow-x:auto;background:var(--surface);border:1.5px solid var(--ink);border-radius:12px}
+table{width:100%;min-width:860px;border-collapse:collapse;font-size:13.5px}
+th,td{padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+th{background:var(--alt);font:700 13px var(--mono)}
+td.crit{width:230px}td.crit b{display:block;font-size:14px;margin-bottom:6px}
+.w{display:flex;align-items:center;gap:8px;font:12px var(--mono);color:var(--muted)}
+.w input{width:90px;accent-color:var(--ink)}
+.sc{display:inline-block;font:700 12px var(--mono);padding:2px 8px;border-radius:4px;margin-bottom:5px;border:1px solid currentColor}
+.s-hi{color:var(--ok);background:var(--ok-soft)}.s-mid{color:var(--warn);background:var(--warn-soft)}.s-lo{color:var(--bad);background:var(--bad-soft)}
+tfoot td{background:var(--ink);color:#fff;font:700 14px var(--mono);border:0}
+tfoot small{display:block;font:400 11.5px var(--mono);color:#CBD5E1;margin-top:4px}
+.win{color:#6EE7B7}
+.act{display:flex;gap:14px;align-items:center;margin-top:16px;flex-wrap:wrap}
+.btn{font:700 14px var(--sans);padding:12px 18px;border-radius:6px;border:0;background:var(--accent);color:#fff;cursor:pointer}.btn:hover{background:#A92F10}
+.fine{font-size:12.5px;color:var(--muted);max-width:80ch;margin-top:14px}
+footer{max-width:1120px;margin:0 auto;padding:6px 20px 44px;font:12px var(--mono);color:var(--muted)}
+@media print{.act,.seg{display:none}.tw{overflow:visible}table{min-width:0}}
+
+    /* RU | EN Tactile Segmented Switch (shared with index.html) */
+    .lang-switch {
+      position: relative;
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      align-items: center;
+      padding: 3px;
+      background: #FFFFFF;
+      border: 1.5px solid #141619;
+      border-radius: 8px;
+      box-shadow: 3px 3px 0 #141619;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      user-select: none;
+      transition: transform 0.14s ease, box-shadow 0.14s ease;
+      flex-shrink: 0;
+      cursor: pointer;
+      appearance: none;
+    }
+    .lang-switch:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 #141619;
+    }
+    .lang-switch:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #141619;
+    }
+    .lang-switch:focus-visible {
+      outline: 3px solid #C93B17;
+      outline-offset: 2px;
+    }
+    .lang-slider {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      left: 3px;
+      width: calc(50% - 6px);
+      background: #141619;
+      border-radius: 5px;
+      pointer-events: none;
+      transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.22s ease;
+      z-index: 1;
+    }
+    .lang-switch[data-lang="en"] .lang-slider {
+      transform: translateX(calc(100% + 6px));
+    }
+    .lang-switch[data-typing="true"] .lang-slider {
+      background: #C93B17;
+    }
+    .lang-sep {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 11px;
+      line-height: 1;
+      color: #D2CCC0;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .lang-opt {
+      position: relative;
+      z-index: 2;
+      padding: 5px 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #494F57;
+      transition: color 0.22s ease;
+      border-radius: 5px;
+      line-height: 1.1;
+      text-align: center;
+    }
+    .lang-opt.is-active {
+      color: #F5F2EB;
+    }
+    .is-typing::after {
+      content: '▍';
+      display: inline;
+      color: #C93B17;
+      margin-left: 1px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-weight: 400;
+      animation: caretBlink 0.42s steps(1) infinite;
+    }
+    @keyframes caretBlink {
+      0%, 58% { opacity: 1; }
+      59%, 100% { opacity: 0.15; }
+    }
+    @media (max-width: 640px) {
+      .lang-opt {
+        padding: 5px 9px;
+        font-size: 11.5px;
+      }
+    }
+    @media print {
+      .lang-switch { display: none !important; }
+    }
+
+.top-right{display:inline-flex;align-items:center;gap:12px;margin-left:auto}
+.top-in{padding:12px 26px;align-items:center}
+@media(max-width:720px){.case-sub-tag{display:none}.top-in{padding:10px 22px}}
+@media(max-width:540px){.case-mid-tag{display:none}}
+
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+<a class="back" href="index.html" data-i18n="back">← Назад в портфолио</a>
+<span class="case-mid-tag" data-i18n="hdr.mid">CASE 07 // Матрица выбора оплаты</span>
+<div class="top-right">
+<span class="case-sub-tag" data-i18n="hdr.sub">Взвешенное сравнение</span>
+<button type="button" class="lang-switch" id="langSwitch" aria-label="Переключить язык: RU / EN" data-lang="ru"><span class="lang-slider" aria-hidden="true"></span><span class="lang-sep" aria-hidden="true">|</span><span class="lang-opt is-active" data-opt="ru">RU</span><span class="lang-opt" data-opt="en">EN</span></button>
+</div>
+</div></header>
+<main>
+<h1 data-i18n="h1">Чем принимать оплату в Telegram-боте: Stars, ЮKassa или CryptoBot</h1>
+<p class="lead" data-i18n="lead">Ответ зависит от того, что вы продаёте. Выберите тип товара, расставьте веса критериев, и таблица пересчитает итог. Формула видна внизу, оценки по каждому критерию подписаны причиной.</p>
+<p class="news"><b data-i18n="news.b">АКТУАЛЬНО НА 20.11.2026.</b> <span data-i18n="news.t">По сообщению Meduza от 18.11.2026, Telegram напомнил разработчикам: цифровые товары и услуги в ботах и Mini Apps оплачиваются только в Stars (подписки, доступ к ИИ-моделям, кредиты и токены). Павел Дуров заявил об исключении для VPN-ботов в ряде стран. Условия меняются, перед запуском сверяйтесь с правилами платформы.</span></p>
+<div class="bar">
+<div class="seg" role="group" aria-label="Тип товара"><button type="button" data-t="digital" aria-pressed="true" data-i18n="seg.dig">Цифровой товар или услуга</button><button type="button" data-t="physical" aria-pressed="false" data-i18n="seg.phys">Физический товар или услуга</button></div>
+</div>
+<div class="tw"><table id="mx"></table></div>
+<div class="act"><button class="btn" id="sub" type="button" data-i18n="btn.copy">Скопировать выбор (JSON)</button><span id="msg" role="status" style="font:12px var(--mono);color:var(--ok)"></span></div>
+<p class="fine" data-i18n="fine">Оценки 0–5 — мнение автора на основе правил Telegram и документации сервисов, а не измерение. Точные комиссии не зафиксированы намеренно: они зависят от тарифа, способа оплаты и курса, их нужно уточнять у провайдера. Для бизнеса дополнительно нужны кассовые чеки по 54-ФЗ.</p>
+</main>
+<footer data-i18n="foot">Обновлено: 2026-11-20 · не является юридической или налоговой консультацией</footer>
+<script>
+/*
+ * submit-handler.js — clipboard-only submit helper for Claude.ai HTML artifacts.
+ *
+ * NOTE ON PROVENANCE: this is a clean-room reimplementation written for this
+ * Claude.ai skill package. It is NOT a copy of f-labs-io/agent-html-skills'
+ * assets/submit-handler.js — that file's actual source could not be retrieved
+ * and is not reproduced here. This version intentionally implements only the
+ * clipboard path: it never reads window.__CLAUDE_SUBMIT_URL__ and never makes
+ * a network request of any kind. It just copies JSON to the clipboard (with
+ * a visible manual-copy fallback) so the user can paste the result back into
+ * the chat.
+ *
+ * Usage from a Submit button:
+ *   <button onclick="submitToClaude({ foo: 'bar' })">Submit</button>
+ */
+(function (global) {
+  'use strict';
+
+  function showManualCopyBanner(text) {
+    var existing = document.getElementById('submit-handler-banner');
+    if (existing) existing.remove();
+
+    var banner = document.createElement('div');
+    banner.id = 'submit-handler-banner';
+    banner.setAttribute('role', 'status');
+    banner.style.position = 'fixed';
+    banner.style.left = '0';
+    banner.style.right = '0';
+    banner.style.bottom = '0';
+    banner.style.zIndex = '2147483647';
+    banner.style.background = 'var(--submit-banner-bg, #1f2328)';
+    banner.style.color = 'var(--submit-banner-fg, #f5f5f5)';
+    banner.style.padding = '12px 16px';
+    banner.style.fontFamily = 'ui-monospace, Menlo, Consolas, monospace';
+    banner.style.fontSize = '13px';
+    banner.style.display = 'flex';
+    banner.style.flexDirection = 'column';
+    banner.style.gap = '8px';
+    banner.style.boxShadow = '0 -2px 12px rgba(0,0,0,.25)';
+
+    var label = document.createElement('div');
+    label.textContent = 'Automatic copy was blocked by the browser — copy this manually and paste it back into Claude:';
+    banner.appendChild(label);
+
+    var pre = document.createElement('pre');
+    pre.style.maxHeight = '160px';
+    pre.style.overflow = 'auto';
+    pre.style.margin = '0';
+    pre.style.whiteSpace = 'pre-wrap';
+    pre.style.wordBreak = 'break-word';
+    pre.style.background = 'rgba(255,255,255,0.08)';
+    pre.style.padding = '8px';
+    pre.style.borderRadius = '6px';
+    pre.textContent = text; // textContent only — never innerHTML with variable data
+    banner.appendChild(pre);
+
+    var closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.textContent = 'Dismiss';
+    closeBtn.style.alignSelf = 'flex-start';
+    closeBtn.style.padding = '4px 10px';
+    closeBtn.style.cursor = 'pointer';
+    closeBtn.addEventListener('click', function () {
+      banner.remove();
+    });
+    banner.appendChild(closeBtn);
+
+    document.body.appendChild(banner);
+  }
+
+  function legacyCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    ta.style.left = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    var ok = false;
+    try {
+      ok = document.execCommand('copy');
+    } catch (err) {
+      ok = false;
+    }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  /**
+   * copyToClipboard(text, opts)
+   * Hardened fallback chain: Clipboard API -> execCommand('copy') -> visible banner.
+   * opts.onResult(mode) is called with 'clipboard-api' | 'legacy' | 'manual'.
+   */
+  function copyToClipboard(text, opts) {
+    opts = opts || {};
+    var done = function (mode) {
+      if (typeof opts.onResult === 'function') opts.onResult(mode);
+    };
+
+    if (global.navigator && global.navigator.clipboard && global.navigator.clipboard.writeText) {
+      global.navigator.clipboard.writeText(text).then(
+        function () { done('clipboard-api'); },
+        function () {
+          if (legacyCopy(text)) {
+            done('legacy');
+          } else {
+            showManualCopyBanner(text);
+            done('manual');
+          }
+        }
+      );
+      return;
+    }
+
+    if (legacyCopy(text)) {
+      done('legacy');
+      return;
+    }
+
+    showManualCopyBanner(text);
+    done('manual');
+  }
+
+  /**
+   * submitToClaude(payload)
+   * Always clipboard mode in Claude.ai chat — there is no server/listener here.
+   * payload is any JSON-serializable value.
+   */
+  function submitToClaude(payload) {
+    var text = typeof payload === 'string' ? payload : JSON.stringify(payload, null, 2);
+    copyToClipboard(text, {
+      onResult: function (mode) {
+        var btns = document.querySelectorAll('[data-submit-button]');
+        var label = mode === 'manual' ? 'Copy it manually below' : 'Copied — paste into Claude';
+        btns.forEach(function (btn) {
+          var original = btn.getAttribute('data-original-label') || btn.textContent;
+          btn.setAttribute('data-original-label', original);
+          btn.textContent = label;
+          setTimeout(function () {
+            btn.textContent = btn.getAttribute('data-original-label');
+          }, 2200);
+        });
+      }
+    });
+  }
+
+  global.copyToClipboard = copyToClipboard;
+  global.submitToClaude = submitToClaude;
+})(window);
+
+
+</script>
+<script>
+(function () {
+  'use strict';
+
+  var I18N = {
+    ru: {
+      'doc.title': 'CASE 07 — Выбор способа оплаты в Telegram-боте: матрица решения',
+      'back': '← Назад в портфолио',
+      'hdr.mid': 'CASE 07 // Матрица выбора оплаты',
+      'hdr.sub': 'Взвешенное сравнение',
+      'h1': 'Чем принимать оплату в Telegram-боте: Stars, ЮKassa или CryptoBot',
+      'lead': 'Ответ зависит от того, что вы продаёте. Выберите тип товара, расставьте веса критериев, и таблица пересчитает итог. Формула видна внизу, оценки по каждому критерию подписаны причиной.',
+      'news.b': 'АКТУАЛЬНО НА 20.11.2026.',
+      'news.t': 'По сообщению Meduza от 18.11.2026, Telegram напомнил разработчикам: цифровые товары и услуги в ботах и Mini Apps оплачиваются только в Stars (подписки, доступ к ИИ-моделям, кредиты и токены). Павел Дуров заявил об исключении для VPN-ботов в ряде стран. Условия меняются, перед запуском сверяйтесь с правилами платформы.',
+      'seg.dig': 'Цифровой товар или услуга',
+      'seg.phys': 'Физический товар или услуга',
+      'btn.copy': 'Скопировать выбор (JSON)',
+      'fine': 'Оценки 0–5 — мнение автора на основе правил Telegram и документации сервисов, а не измерение. Точные комиссии не зафиксированы намеренно: они зависят от тарифа, способа оплаты и курса, их нужно уточнять у провайдера. Для бизнеса дополнительно нужны кассовые чеки по 54-ФЗ.',
+      'foot': 'Обновлено: 2026-11-20 · не является юридической или налоговой консультацией'
+    },
+    en: {
+      'doc.title': 'CASE 07 — Telegram Bot Payment Matrix: Weighted Decision Tool',
+      'back': '← Back to portfolio',
+      'hdr.mid': 'CASE 07 // Payment Decision Matrix',
+      'hdr.sub': 'Weighted Comparison',
+      'h1': 'Telegram Bot Payments: Stars vs YooKassa vs CryptoBot',
+      'lead': 'The right gateway depends on what you sell. Pick your product type, adjust criteria weights, and the matrix recalculates weighted scores live with an auditable formula and rationale per cell.',
+      'news.b': 'CURRENT AS OF 2026-11-20.',
+      'news.t': 'Per Meduza (Nov 18, 2026), Telegram reminded developers that digital goods and services inside bots and Mini Apps must use Telegram Stars (subscriptions, AI model access, credits, tokens). Pavel Durov noted an exception for VPN bots in certain regions. Always verify current platform policies before launch.',
+      'seg.dig': 'Digital goods or services',
+      'seg.phys': 'Physical goods or offline services',
+      'btn.copy': 'Copy Selection (JSON)',
+      'fine': '0–5 scores reflect engineering judgment based on Telegram policies and provider docs rather than benchmarks. Exact fees vary by plan, payment rail, and FX rate — always confirm directly with the provider. Commercial sellers may also need fiscal receipts.',
+      'foot': 'Updated: 2026-11-20 · informational only, not legal or tax advice'
+    }
+  };
+
+    function createLangEngine(config) {
+      var dictMap = config.dict;
+      var onRender = config.onRender || function () {};
+      var getDynNodes = config.getDynNodes || function () { return []; };
+      var langSwitch = document.getElementById('langSwitch');
+      var langOpts = langSwitch ? langSwitch.querySelectorAll('[data-opt]') : [];
+      var cur = 'ru';
+      var animGen = 0;
+      var rafId = 0;
+      var locked = [];
+
+      function cleanup() {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+        document.querySelectorAll('.is-typing').forEach(function (el) { el.classList.remove('is-typing'); });
+        locked.forEach(function (el) { el.style.minHeight = ''; });
+        locked = [];
+        if (langSwitch) langSwitch.removeAttribute('data-typing');
+      }
+
+      function calcDuration(len) {
+        if (len <= 12) return 220;
+        if (len <= 45) return 300 + (len - 12) * 8;
+        return Math.min(820, 540 + (len - 45) * 1.5);
+      }
+
+      function syncLinks(lang) {
+        document.querySelectorAll('a[href^="index.html"]').forEach(function (a) {
+          a.setAttribute('href', lang === 'en' ? 'index.html?lang=en' : 'index.html');
+        });
+      }
+
+      function apply(lang, animate) {
+        if (lang !== 'ru' && lang !== 'en') return;
+        cleanup();
+        animGen += 1;
+        var myGen = animGen;
+        cur = lang;
+        document.documentElement.lang = lang;
+        if (dictMap[lang] && dictMap[lang]['doc.title']) {
+          document.title = dictMap[lang]['doc.title'];
+        }
+        if (langSwitch) {
+          langSwitch.setAttribute('data-lang', lang);
+          langOpts.forEach(function (opt) {
+            opt.classList.toggle('is-active', opt.getAttribute('data-opt') === lang);
+          });
+        }
+        syncLinks(lang);
+        try {
+          var url = new URL(window.location.href);
+          if (lang === 'en') url.searchParams.set('lang', 'en');
+          else url.searchParams.delete('lang');
+          window.history.replaceState(null, '', url.toString());
+        } catch (e) { /* file:// */ }
+
+        var prevDyn = animate ? getDynNodes().map(function (el) { return el.textContent; }) : [];
+        onRender(lang);
+
+        var dict = dictMap[lang] || {};
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+          var k = el.getAttribute('data-i18n-placeholder');
+          if (typeof dict[k] === 'string') el.setAttribute('placeholder', dict[k]);
+        });
+
+        var jobs = [];
+        document.querySelectorAll('[data-i18n]').forEach(function (el) {
+          var k = el.getAttribute('data-i18n');
+          if (typeof dict[k] === 'string') jobs.push({ el: el, text: dict[k] });
+        });
+
+        var nextDyn = getDynNodes();
+        nextDyn.forEach(function (el, idx) {
+          var targetText = el.textContent;
+          if (animate && typeof prevDyn[idx] === 'string') {
+            el.textContent = prevDyn[idx];
+          }
+          jobs.push({ el: el, text: targetText });
+        });
+
+        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!animate || reduced) {
+          jobs.forEach(function (j) { j.el.textContent = j.text; });
+          return;
+        }
+
+        var vh = window.innerHeight || 800;
+        var blockTags = { H1: 1, H2: 1, H3: 1, P: 1, DIV: 1, TD: 1, TH: 1, DD: 1, LI: 1 };
+        var animJobs = [];
+
+        jobs.forEach(function (j) {
+          if (!j.text) { j.el.textContent = ''; return; }
+          var rect = j.el.getBoundingClientRect();
+          var inView = rect.width > 0 && rect.height > 0 && rect.bottom >= -140 && rect.top <= vh + 140;
+          if (!inView) {
+            j.el.textContent = j.text;
+            return;
+          }
+          if (blockTags[j.el.tagName]) {
+            var h = j.el.offsetHeight;
+            if (h > 0) {
+              j.el.style.minHeight = h + 'px';
+              locked.push(j.el);
+            }
+          }
+          var normTop = Math.max(0, Math.min(1, rect.top / vh));
+          animJobs.push({
+            el: j.el,
+            text: j.text,
+            len: j.text.length,
+            delay: Math.round(normTop * 210),
+            duration: calcDuration(j.text.length),
+            started: false,
+            done: false
+          });
+        });
+
+        if (!animJobs.length) return;
+        if (langSwitch) langSwitch.setAttribute('data-typing', 'true');
+        var startTs = performance.now();
+
+        function tick(now) {
+          if (myGen !== animGen) return;
+          var elapsedAll = now - startTs;
+          var rem = 0;
+          for (var i = 0; i < animJobs.length; i++) {
+            var job = animJobs[i];
+            if (job.done) continue;
+            if (elapsedAll < job.delay) { rem += 1; continue; }
+            if (!job.started) {
+              job.started = true;
+              job.el.classList.add('is-typing');
+              job.el.textContent = '';
+            }
+            var t = elapsedAll - job.delay;
+            var p = Math.min(1, t / job.duration);
+            var eased = 0.65 * p + 0.35 * (1 - (1 - p) * (1 - p));
+            var chars = Math.min(job.len, Math.max(1, Math.floor(eased * job.len)));
+            if (p >= 1) {
+              job.el.textContent = job.text;
+              job.el.classList.remove('is-typing');
+              job.done = true;
+            } else {
+              job.el.textContent = job.text.slice(0, chars);
+              rem += 1;
+            }
+          }
+          if (rem > 0) rafId = requestAnimationFrame(tick);
+          else cleanup();
+        }
+        rafId = requestAnimationFrame(tick);
+      }
+
+      if (langSwitch) {
+        langSwitch.addEventListener('click', function () {
+          apply(cur === 'ru' ? 'en' : 'ru', true);
+        });
+      }
+
+      var initLang = 'ru';
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('lang') === 'en') initLang = 'en';
+      } catch (e) {}
+
+      return {
+        getLang: function () { return cur; },
+        init: function () { apply(initLang, false); },
+        apply: apply
+      };
+    }
+
+
+  var curLang = 'ru';
+  var C_RU = ['Telegram Stars', 'ЮKassa (Telegram Payments)', 'CryptoBot (Crypto Pay)'];
+  var C_EN = ['Telegram Stars', 'YooKassa (Telegram Payments)', 'CryptoBot (Crypto Pay)'];
+
+  var POL = {
+    digital: {
+      ru: [
+        [5, 'Обязательная валюта для цифровых товаров и услуг в ботах и Mini Apps.'],
+        [1, 'Для цифровых товаров внутри бота не подходит. Заявленное исключение касается только VPN-ботов в ряде стран.'],
+        [2, 'Внешний крипто-платёж формально вне Stars, но допустим ли он, нужно проверять по условиям платформы. Возможны претензии.']
+      ],
+      en: [
+        [5, 'Mandatory currency for digital goods and services inside Telegram bots and Mini Apps.'],
+        [1, 'Not permitted for in-bot digital goods; the stated carve-out applies only to VPN bots in select regions.'],
+        [2, 'External crypto checkout sits outside Stars, but compliance must be checked against Telegram ToS — risk of enforcement.']
+      ]
+    },
+    physical: {
+      ru: [
+        [0, 'Физические товары за Stars продавать нельзя.'],
+        [5, 'Штатный путь для физических товаров и услуг через платёжных провайдеров Telegram.'],
+        [4, 'Внешний инвойс: ограничение Stars на физические товары его не касается.']
+      ],
+      en: [
+        [0, 'Physical goods cannot be sold for Telegram Stars.'],
+        [5, 'Official path for physical goods and offline services via Telegram Payment Providers.'],
+        [4, 'External crypto invoice: Stars digital-goods restriction does not apply to physical goods.']
+      ]
+    }
+  };
+
+  var R = [
+    { id: 'policy', nRu: 'Соответствие правилам Telegram', nEn: 'Telegram Policy Compliance', w: 5 },
+    {
+      id: 'entry', nRu: 'Порог входа и оформление', nEn: 'Onboarding & Paperwork', w: 3,
+      ru: [
+        [4, 'Юрлицо не нужно. Баланс бота выводится через Fragment в TON-кошелёк.'],
+        [2, 'Нужен статус ИП, юрлица или самозанятого, договор с сервисом и чеки.'],
+        [4, 'Приложение создаётся командой /pay в @CryptoBot, выдаётся API-токен.']
+      ],
+      en: [
+        [4, 'No corporate entity required. Bot balance withdraws to a TON wallet via Fragment.'],
+        [2, 'Requires registered business / self-employed status, merchant contract, and fiscal receipts.'],
+        [4, 'Create an app via /pay in @CryptoBot and get an API token in minutes.']
+      ]
+    },
+    {
+      id: 'payout', nRu: 'Вывод денег', nEn: 'Payouts & Settlement', w: 3,
+      ru: [
+        [2, 'Через Fragment в TON, удержание до 21 дня, минимум 1000 Stars. Нужна конвертация в фиат.'],
+        [4, 'Расчёты на счёт по договору с сервисом, привычная бухгалтерия.'],
+        [3, 'Остаётся в криптовалюте, для рублей нужен отдельный вывод.']
+      ],
+      en: [
+        [2, 'Withdrawn via Fragment in TON with up to 21-day hold and 1,000 Stars minimum; requires fiat off-ramp.'],
+        [4, 'Direct settlement to your bank account under merchant agreement with clean accounting.'],
+        [3, 'Settles in crypto; converting to local fiat requires an extra off-ramp step.']
+      ]
+    },
+    {
+      id: 'reach', nRu: 'Охват платящих', nEn: 'Payer Reach', w: 3,
+      ru: [
+        [4, 'Stars покупают через Apple, Google, PremiumBot и Fragment, плательщику не нужен кошелёк.'],
+        [4, 'Банковские карты и способы, которые поддерживает провайдер.'],
+        [2, 'Нужен крипто-кошелёк и готовность платить криптой.']
+      ],
+      en: [
+        [4, 'Users buy Stars via Apple Pay, Google Pay, PremiumBot, or Fragment — no wallet required.'],
+        [4, 'Supports bank cards and local instant payment methods via the provider.'],
+        [2, 'Requires the customer to hold crypto and feel comfortable paying on-chain/in-bot.']
+      ]
+    },
+    {
+      id: 'dev', nRu: 'Сложность интеграции', nEn: 'Integration Effort', w: 2,
+      ru: [
+        [4, 'Bot API, валюта XTR, внешний провайдер не нужен.'],
+        [3, 'Токен провайдера, обработка предоплаты и чеков.'],
+        [3, 'HTTP API и вебхуки, статусы инвойсов обрабатываются самостоятельно.']
+      ],
+      en: [
+        [4, 'Native Bot API with currency XTR — zero third-party provider SDKs needed.'],
+        [3, 'Requires provider token, pre_checkout_query handling, and receipt metadata.'],
+        [3, 'REST API + signed webhooks; invoice lifecycle managed in your bot backend.']
+      ]
+    },
+    {
+      id: 'fee', nRu: 'Прозрачность итоговой комиссии', nEn: 'Fee Predictability', w: 2,
+      ru: [
+        [2, 'Итог зависит от курса Stars → TON → фиат, оценки в источниках сильно расходятся.'],
+        [4, 'Тариф публикуется, зависит от способа оплаты. Подключение бесплатное.'],
+        [3, 'Условия в документации Crypto Pay, сверять перед запуском.']
+      ],
+      en: [
+        [2, 'Net take-home depends on Stars → TON → fiat conversion spread and app store fees.'],
+        [4, 'Published per-method tariff schedule with free onboarding.'],
+        [3, 'Documented in Crypto Pay API docs; double-check current rates before launch.']
+      ]
+    }
+  ];
+
+  var type = 'digital', tbl = document.getElementById('mx');
+  function mk(t, p, x) { var e = document.createElement(t); if (x !== undefined) e.textContent = x; if (p) p.appendChild(e); return e; }
+  function cls(s) { return s >= 4 ? 's-hi' : s >= 2 ? 's-mid' : 's-lo'; }
+  function getCands() { return curLang === 'en' ? C_EN : C_RU; }
+  function cells(r) { return r.id === 'policy' ? POL[type][curLang] : r[curLang]; }
+  function totals() {
+    return getCands().map(function (_, i) {
+      var a = 0, m = 0;
+      R.forEach(function (r) { a += r.w * cells(r)[i][0]; m += r.w * 5; });
+      return { raw: a, max: m, pct: m ? Math.round(100 * a / m) : 0 };
+    });
+  }
+
+  function draw() {
+    tbl.replaceChildren();
+    var h = mk('thead', tbl).insertRow();
+    mk('th', h, curLang === 'en' ? 'Criterion & Weight' : 'Критерий и вес');
+    getCands().forEach(function (c) { mk('th', h, c); });
+
+    var tb = mk('tbody', tbl);
+    R.forEach(function (r) {
+      var tr = tb.insertRow(), td = tr.insertCell();
+      td.className = 'crit';
+      var critTitle = curLang === 'en' ? r.nEn : r.nRu;
+      mk('b', td, critTitle);
+      var lb = mk('label', td); lb.className = 'w';
+      mk('span', lb, curLang === 'en' ? 'weight' : 'вес');
+      var inp = mk('input', lb);
+      inp.type = 'range'; inp.min = 0; inp.max = 5; inp.step = 1; inp.value = r.w;
+      inp.setAttribute('aria-label', critTitle);
+      var v = mk('span', lb, String(r.w));
+      inp.addEventListener('input', function () { r.w = +inp.value; v.textContent = inp.value; foot(); });
+      cells(r).forEach(function (c) {
+        var d = tr.insertCell();
+        var b = mk('span', d, c[0] + ' / 5');
+        b.className = 'sc ' + cls(c[0]);
+        var txt = mk('div', d, c[1]);
+        txt.className = 'cell-note';
+      });
+    });
+    var tf = mk('tfoot', tbl); tf.id = 'tf';
+    foot();
+  }
+
+  function foot() {
+    var tf = document.getElementById('tf');
+    if (!tf) return;
+    tf.replaceChildren();
+    var tr = tf.insertRow(), t = totals(), best = Math.max.apply(null, t.map(function (x) { return x.pct; }));
+    var f = tr.insertCell();
+    f.textContent = curLang === 'en' ? 'Score = Σ(weight × score) / Σ(weight × 5)' : 'Итог = Σ(вес × оценка) / Σ(вес × 5)';
+    t.forEach(function (x) {
+      var d = tr.insertCell();
+      var s = mk('span', d, x.pct + '%');
+      if (x.pct === best && best > 0) s.className = 'win';
+      mk('small', d, curLang === 'en' ? (x.raw + ' of ' + x.max) : (x.raw + ' из ' + x.max));
+    });
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (b) {
+    b.addEventListener('click', function () {
+      type = b.dataset.t;
+      Array.prototype.forEach.call(document.querySelectorAll('.seg button'), function (x) {
+        x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+      });
+      draw();
+    });
+  });
+
+  document.getElementById('sub').addEventListener('click', function () {
+    var t = totals(), o = { productType: type, weights: {}, scores: {}, totalsPct: {} };
+    R.forEach(function (r) { o.weights[r.id] = r.w; o.scores[r.id] = cells(r).map(function (c) { return c[0]; }); });
+    getCands().forEach(function (c, i) { o.totalsPct[c] = t[i].pct; });
+    submitToClaude(o);
+    document.getElementById('msg').textContent = curLang === 'en' ? '✓ Copied' : '✓ Скопировано';
+  });
+
+  var langEngine = createLangEngine({
+    dict: I18N,
+    onRender: function (lang) {
+      curLang = lang;
+      draw();
+    },
+    getDynNodes: function () {
+      var nodes = [];
+      tbl.querySelectorAll('thead th, td.crit b, .cell-note').forEach(function (el) { nodes.push(el); });
+      return nodes;
+    }
+  });
+
+  langEngine.init();
+})();
+</script>
+</body>
+</html>

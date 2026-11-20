@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>P2P Terminal (demo)</title>
+<style>
+:root{
+  --bg:#000000; --card:#1c1c1e; --card2:#28282c; --text:#ffffff; --sub:#9aa0a6;
+  --green:#81c995; --red:#f28b82; --blue:#8ab4f8; --yellow:#fdd663; --radius:28px;
+  --accent:#81c995; --accent-rgb:129,201,149;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+body{margin:0; background:var(--bg); color:var(--text);
+  font:15px/1.4 -apple-system,Roboto,sans-serif; padding-bottom:104px}
+.header{position:sticky; top:0; z-index:5;
+  background:rgba(0,0,0,.72); backdrop-filter:blur(22px) saturate(1.3);
+  -webkit-backdrop-filter:blur(22px) saturate(1.3);
+  padding:18px 20px 22px; display:flex; flex-direction:column; gap:14px}
+.header::after{content:""; position:absolute; left:0; right:0; top:100%; height:28px;
+  background:linear-gradient(to bottom, rgba(0,0,0,.45), rgba(0,0,0,0)); pointer-events:none}
+.hdr-top{display:flex; align-items:center; gap:10px}
+.rate{font-size:40px; font-weight:700; letter-spacing:-.5px; line-height:1}
+.rate .delta{display:inline-block; font-size:12px; font-weight:700; color:var(--accent);
+  background:rgba(var(--accent-rgb),.16); padding:4px 9px; border-radius:999px; margin-left:8px;
+  vertical-align:middle}
+.rate .delta:empty{display:none}
+.rate #hdrRate{transition:color .15s}
+.flash-up{animation:flashUp .7s ease}
+.flash-down{animation:flashDown .7s ease}
+@keyframes flashUp{0%{color:var(--green)}100%{color:var(--text)}}
+@keyframes flashDown{0%{color:var(--red)}100%{color:var(--text)}}
+.badge{font-size:10px; font-weight:600; letter-spacing:.4px; padding:5px 11px;
+  border-radius:999px; background:var(--card2); color:var(--sub)}
+.gear{margin-left:auto; border:0; background:var(--card2); color:var(--sub);
+  width:36px; height:36px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  border-radius:999px; flex:none}
+.gear:active{background:rgba(255,255,255,.1)}
+.pill{font-size:12px; font-weight:700; letter-spacing:.3px;
+  padding:8px 14px; border-radius:999px; background:rgba(var(--accent-rgb),.16); color:var(--accent);
+  cursor:pointer}
+.pill.paused{background:rgba(253,214,99,.16); color:var(--yellow)}
+.pill.deal{background:rgba(138,180,248,.16); color:var(--blue)}
+.pill.off{background:rgba(242,139,130,.16); color:var(--red)}
+main{padding:10px 16px}
+.card{background:var(--card); border-radius:var(--radius); padding:20px 22px; margin-bottom:16px}
+.card h3{margin:0 0 14px; font-size:15px; font-weight:500; text-transform:none;
+  letter-spacing:0; color:var(--sub)}
+.row{display:flex; justify-content:space-between; padding:5px 0; align-items:center}
+.row .k{color:var(--sub)} .row .v{font-weight:600}
+.bar{height:8px; border-radius:4px; background:var(--card2); overflow:hidden; margin:6px 0 2px}
+.bar i{display:block; height:100%; background:var(--green); border-radius:4px}
+.deal{box-shadow:inset 0 0 0 1.5px rgba(138,180,248,.35)}
+.btns{display:flex; gap:10px; margin-top:14px}
+.btn{flex:1; border:0; border-radius:18px; padding:16px 0; font-size:16px;
+  font-weight:700; color:#fff; cursor:pointer}
+.btn.buy{background:var(--accent); color:#06281a}
+.btn.fail{background:var(--card2); color:var(--red)}
+.btn.ghost{background:var(--card2); border:0; color:var(--text); font-weight:600; font-size:15px}
+.btn.ghost:active{background:rgba(255,255,255,.1)}
+.seg{display:flex; background:var(--card2); border-radius:16px; padding:4px; margin-bottom:12px}
+.seg button{flex:1; border:0; background:none; color:var(--sub); padding:10px;
+  border-radius:12px; font-weight:600}
+.seg button.on{background:var(--card); color:var(--text)}
+.list .item{display:flex; justify-content:space-between; align-items:center; padding:12px 8px;
+  border-radius:16px; font-size:14px; cursor:pointer; gap:10px}
+.list .item:active{background:rgba(255,255,255,.06)}
+.item .col{display:flex; flex-direction:column; gap:2px}
+.item .sub{font-size:13px; color:var(--sub)}
+.ok{color:var(--green)} .bad{color:var(--red)}
+.log{font:12px/1.6 ui-monospace,monospace; color:var(--sub);
+  background:var(--card); border-radius:var(--radius); padding:14px;
+  max-height:62vh; overflow:auto; white-space:pre-wrap; word-break:break-word}
+.log .lvl{font-weight:700}
+.lvl-info{color:var(--sub)} .lvl-warn{color:var(--yellow)} .lvl-error{color:var(--red)}
+.lvl-deal{color:var(--blue)} .lvl-browser{color:var(--green)}
+.chart{height:120px; border-radius:16px; background:var(--card2);
+  display:flex; align-items:center; justify-content:center; color:var(--sub);
+  font-size:12px; margin-bottom:12px}
+nav{position:fixed; left:14px; right:14px; bottom:calc(16px + env(safe-area-inset-bottom));
+  display:flex; align-items:center; justify-content:space-between; gap:2px; background:var(--card);
+  border-radius:32px; padding:10px 10px; box-shadow:0 16px 40px rgba(0,0,0,.55); z-index:5}
+nav button{flex:none; border:0; background:none; color:var(--sub); padding:0; cursor:pointer}
+nav button.on{color:var(--text); flex:1 1 auto}
+nav button .ic{display:flex; align-items:center; justify-content:center; gap:7px;
+  height:44px; padding:0 14px; border-radius:22px; transition:background .25s, padding .25s;
+  white-space:nowrap}
+nav button.on .ic{background:var(--card2); padding:0 18px; width:100%}
+nav button .ic svg{width:22px; height:22px; flex:none}
+nav button .lbl{font-size:12px; font-weight:700; max-width:0; opacity:0; overflow:hidden;
+  transition:max-width .25s ease, opacity .2s ease}
+nav button.on .lbl{max-width:90px; opacity:1}
+.hidden{display:none}
+.scrim{position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:8; opacity:0;
+  pointer-events:none; transition:opacity .2s}
+.scrim.open{opacity:1; pointer-events:auto}
+.sheet{position:fixed; top:0; right:0; bottom:0; left:0; width:100%; z-index:9;
+  background:var(--bg); padding:20px;
+  overflow:auto; transform:translateX(100%); transition:transform .25s;
+  padding-bottom:calc(20px + env(safe-area-inset-bottom))}
+.sheet.open{transform:translateX(0)}
+.sheet h2{margin:8px 0 4px; font-size:30px; font-weight:700; letter-spacing:-.3px}
+.sheet .close{position:absolute; top:14px; right:16px; border:0; background:var(--card2);
+  color:var(--sub); font-size:16px; width:32px; height:32px; border-radius:999px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center}
+.group{margin:14px 0; background:var(--card); border-radius:var(--radius); padding:14px 18px}
+.group h4{margin:0 0 10px; font-size:13px; font-weight:500; text-transform:none;
+  letter-spacing:0; color:var(--sub); display:flex; align-items:center; gap:10px}
+.grp-ic{width:28px; height:28px; border-radius:9px; display:inline-flex; align-items:center;
+  justify-content:center; flex:none}
+.grp-ic svg{width:16px; height:16px}
+.grp-ic.gc-accent{background:rgba(var(--accent-rgb),.18); color:var(--accent)}
+.grp-ic.gc-green{background:rgba(129,201,149,.18); color:#81c995}
+.grp-ic.gc-blue{background:rgba(138,180,248,.18); color:#8ab4f8}
+.grp-ic.gc-yellow{background:rgba(253,214,99,.18); color:#fdd663}
+.grp-ic.gc-purple{background:rgba(197,138,249,.18); color:#c58af9}
+.grp-ic.gc-red{background:rgba(242,139,130,.18); color:#f28b82}
+.grp-ic.gc-orange{background:rgba(246,178,107,.18); color:#f6b26b}
+.grp-ic.gc-grey{background:rgba(154,160,166,.18); color:#9aa0a6}
+.field{margin:12px 0}
+.field label{display:flex; justify-content:space-between; font-size:13px; color:var(--sub)}
+.field label b{color:var(--text); font-weight:600}
+input[type=range]{width:100%; accent-color:var(--blue); margin-top:6px}
+input[type=number]{width:100%; background:var(--card2); border:0;
+  color:var(--text); border-radius:16px; padding:10px 14px; font-size:14px; margin-top:6px}
+.toggle{display:flex; align-items:center; justify-content:space-between; padding:10px 0; gap:12px}
+.toggle span{font-size:14px}
+.sw{width:46px; height:28px; border-radius:999px; background:var(--card2); position:relative;
+  cursor:pointer; transition:background .2s; flex:none}
+.sw::after{content:""; position:absolute; top:3px; left:3px; width:22px; height:22px;
+  border-radius:50%; background:var(--sub); transition:.2s}
+.sw.on{background:var(--accent)} .sw.on::after{left:21px; background:#06281a}
+.warn{font-size:12px; color:var(--yellow); margin-top:8px; line-height:1.5}
+.info{font-size:12px; color:var(--sub); line-height:1.7}
+.info b{color:var(--text)}
+.danger .btn{background:none; color:var(--red); box-shadow:inset 0 0 0 1px rgba(242,139,130,.4)}
+.danger .btn.solid{background:var(--red); color:#3a0a06; box-shadow:none}
+.modal{position:fixed; left:0; right:0; bottom:0; z-index:10; background:var(--card);
+  border-radius:28px 28px 0 0; padding:18px 18px calc(18px + env(safe-area-inset-bottom));
+  transform:translateY(110%); transition:transform .25s; max-height:80vh; overflow:auto}
+.modal.open{transform:translateY(0)}
+.modal .grab{width:40px; height:4px; border-radius:2px; background:var(--card2);
+  margin:0 auto 12px}
+.timeline{margin:6px 0 2px}
+.tl{display:flex; gap:12px; padding:7px 0; position:relative}
+.tl::before{content:""; position:absolute; left:9px; top:24px; bottom:-7px;
+  width:2px; background:var(--card2)}
+.tl:last-child::before{display:none}
+.dot{width:20px; height:20px; border-radius:50%; background:var(--card2); flex:none;
+  display:flex; align-items:center; justify-content:center; font-size:11px; z-index:1}
+.tl.done .dot{background:var(--green); color:#06281a}
+.tl.cur .dot{background:var(--blue); color:#04203a}
+.tl .t{font-size:14px} .tl .s{font-size:11px; color:var(--sub)}
+.shots{display:flex; gap:8px; margin-top:8px}
+.shots div{width:54px; height:96px; border-radius:12px; background:var(--card2);
+  display:flex; align-items:center; justify-content:center; font-size:9px; color:var(--sub)}
+.toastbox{position:fixed; left:50%; bottom:92px; transform:translateX(-50%) translateY(20px);
+  z-index:30; background:var(--card2); color:var(--text); font-size:13px; font-weight:600;
+  padding:10px 16px; border-radius:999px; opacity:0; pointer-events:none; transition:.25s;
+  max-width:80%; text-align:center}
+.toastbox.show{opacity:1; transform:translateX(-50%) translateY(0)}
+.spark-card{position:relative}
+.spark-card svg{width:100%; height:96px; display:block; margin-top:8px; touch-action:pan-y}
+.spark-line{fill:none; stroke:var(--accent); stroke-width:2.5}
+.spark-area{fill:url(#gspark)}
+.spark-dot{fill:#fff; stroke:var(--accent); stroke-width:2; display:none}
+.spark-tip{position:absolute; top:34px; transform:translateX(-50%); background:var(--card2);
+  color:var(--text); font-size:11px; font-weight:700; padding:5px 9px; border-radius:10px;
+  display:none; pointer-events:none; white-space:nowrap; z-index:2}
+.stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:8px}
+.stat-tile{background:var(--card2); border-radius:18px; padding:16px 4px; text-align:center}
+.stat-tile b{display:block; font-size:20px; line-height:1.2; font-weight:700}
+.stat-tile span{font-size:9.5px; color:var(--sub); text-transform:uppercase; letter-spacing:.5px}
+.chips{display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; margin-bottom:12px;
+  -webkit-overflow-scrolling:touch}
+.chip{flex:none; border:0; background:var(--card); color:var(--sub);
+  font-size:12px; font-weight:600; padding:8px 14px; border-radius:999px; cursor:pointer}
+.chip.on{background:var(--card2); color:var(--text)}
+.day-head{font-size:11px; text-transform:uppercase; letter-spacing:.8px; color:var(--sub);
+  margin:14px 2px 6px}
+.day-head:first-child{margin-top:0}
+.live{display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--sub);
+  margin:2px 0 10px}
+.live i{width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.act-row{display:flex; gap:12px; align-items:flex-start; padding:10px 8px; border-radius:16px}
+.act-row:active{background:rgba(255,255,255,.06)}
+.act-ic{width:36px; height:36px; border-radius:12px; flex:none; display:flex;
+  align-items:center; justify-content:center; font-size:14px; background:var(--card2)}
+.act-ic.ok{background:rgba(129,201,149,.16); color:var(--green)}
+.act-ic.bad{background:rgba(242,139,130,.16); color:var(--red)}
+.act-ic.warn{background:rgba(253,214,99,.16); color:var(--yellow)}
+.act-ic.info{background:rgba(138,180,248,.16); color:var(--blue)}
+.act-tx{flex:1; font-size:14px}
+.act-tx .tm{display:block; font-size:12px; color:var(--sub); margin-top:2px}
+.blink{animation:blinkA 1s infinite}
+@keyframes blinkA{0%,100%{opacity:1}50%{opacity:.35}}
+.shots img{width:100%;height:100%;object-fit:cover;border-radius:12px}
+.shots .sub{width:auto;height:auto;background:none;display:block;font-size:11px;color:var(--sub)}
+.fullov{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:40;display:none;align-items:center;justify-content:center}
+.fullov.open{display:flex}
+.fullov img{max-width:96%;max-height:92%;border-radius:16px}
+.tl.bad .dot{background:var(--red);color:#fff}
+.timeline .sub{font-size:11px;color:var(--sub)}
+.chart svg{width:100%;height:100%;display:block}
+.cbar{fill:var(--green);opacity:.85}
+.cline{fill:none;stroke:var(--blue);stroke-width:2}
+.btn.ghost.on{background:var(--card2);color:var(--yellow)}
+.live i.frozen{background:var(--yellow);animation:none}
+.field select{width:100%;background:var(--card2);border:0;color:var(--text);border-radius:16px;padding:10px 14px;font-size:14px;margin-top:6px}
+input[type=text]{width:100%;background:var(--card2);border:0;color:var(--text);border-radius:16px;padding:10px 14px;font-size:14px;margin-top:6px}
+.dd{margin-top:6px;position:relative}
+.dd-btn{width:100%;background:var(--card2);border:0;color:var(--text);border-radius:16px;padding:12px 14px;font-size:14px;text-align:left;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.dd-btn::after{content:"\25BE";color:var(--sub)}
+.dd-list{display:none;margin-top:6px;background:var(--card2);border-radius:16px;overflow:hidden}
+.dd.open .dd-list{display:block}
+.dd-opt{padding:12px 14px;font-size:14px;color:var(--sub);cursor:pointer}
+.dd-opt:active{background:rgba(255,255,255,.06)}
+.dd-opt.on{color:var(--text);background:rgba(138,180,248,.16)}
+
+.tab-title{font-size:26px; font-weight:700; letter-spacing:-.3px; margin:6px 2px 16px}
+
+@keyframes skelPulse{0%,100%{opacity:1}50%{opacity:.35}}
+.skeleton-pulse{animation:skelPulse 1.3s ease-in-out infinite}
+
+@keyframes fadeIn{from{opacity:0; transform:translateY(6px)}to{opacity:1; transform:translateY(0)}}
+.fade-in{animation:fadeIn .25s ease}
+
+.btn:active{transform:scale(.97)}
+.chip:active{transform:scale(.95)}
+.gear:active svg, nav button .ic:active{transform:scale(.92)}
+.accent-dot:active{transform:scale(.9)}
+.modal{transition:transform .32s cubic-bezier(.22,1,.36,1)}
+.sheet{transition:transform .32s cubic-bezier(.22,1,.36,1)}
+
+.ring-bg{fill:none; stroke:var(--card2); stroke-width:4}
+.ring-fg{fill:none; stroke:var(--accent); stroke-width:4; stroke-linecap:round;
+  stroke-dasharray:94.2; stroke-dashoffset:0; transition:stroke-dashoffset .4s linear, stroke .3s}
+.ring-fg.low{stroke:var(--red)}
+
+.swipe-buy{width:100%}
+.swipe-track{position:relative; height:56px; border-radius:28px; background:var(--card2);
+  overflow:hidden; display:flex; align-items:center}
+.swipe-fill{position:absolute; left:0; top:0; bottom:0; background:rgba(var(--accent-rgb),.35);
+  border-radius:28px; width:52px}
+.swipe-label{position:relative; z-index:1; width:100%; text-align:center; font-weight:700;
+  font-size:15px; color:var(--text); pointer-events:none}
+.swipe-thumb{position:absolute; left:4px; top:4px; width:48px; height:48px; border-radius:50%;
+  background:var(--accent); display:flex; align-items:center; justify-content:center; z-index:2;
+  touch-action:none; cursor:grab; box-shadow:0 4px 14px rgba(0,0,0,.45)}
+.swipe-buy.done .swipe-track{background:rgba(var(--accent-rgb),.22)}
+
+.accent-row{display:flex; gap:12px; margin-top:8px}
+.accent-dot{width:34px; height:34px; border-radius:50%; border:2px solid transparent;
+  cursor:pointer; padding:0}
+.accent-dot.on{border-color:#fff}
+
+.log-row{padding:4px 8px; border-radius:10px; cursor:pointer}
+.log-row:active{background:rgba(255,255,255,.08)}
+.log-row.log-err{background:rgba(242,139,130,.1)}
+
+.stepper{display:flex; align-items:center; gap:8px; margin-top:6px}
+.stepper input{flex:1; margin-top:0; text-align:center}
+.step-btn{width:40px; height:40px; border-radius:14px; border:0; background:var(--card2);
+  color:var(--text); font-size:20px; font-weight:700; display:flex; align-items:center;
+  justify-content:center; flex:none; cursor:pointer; line-height:1}
+.step-btn:active{transform:scale(.92); background:rgba(255,255,255,.12)}
+
+.mini-deal{position:fixed; left:14px; right:14px; bottom:calc(92px + env(safe-area-inset-bottom));
+  z-index:4; background:var(--card); border-radius:22px; padding:10px 14px; display:flex;
+  align-items:center; gap:12px; cursor:pointer;
+  box-shadow:inset 0 0 0 1.5px rgba(138,180,248,.35), 0 10px 28px rgba(0,0,0,.5)}
+.mini-deal.hidden{display:none}
+.mini-deal-info{flex:1; display:flex; flex-direction:column; min-width:0}
+.mini-deal-info b{font-size:15px}
+.mini-deal-info span{font-size:11px; color:var(--sub); overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.mini-deal-cta{font-size:12px; font-weight:700; color:var(--accent); background:rgba(var(--accent-rgb),.16);
+  padding:7px 13px; border-radius:999px; flex:none}
+
+.empty-state{display:flex; flex-direction:column; align-items:center; gap:10px;
+  padding:20px 10px; color:var(--sub); font-size:12px; text-align:center}
+.empty-state .ic{width:42px; height:42px; border-radius:14px; background:var(--card2);
+  display:flex; align-items:center; justify-content:center; color:var(--sub)}
+
+.lang-switch{position:relative;display:inline-grid;grid-template-columns:1fr 1fr;gap:4px;align-items:center;padding:2px;background:var(--card2);border:1.5px solid rgba(255,255,255,.28);border-radius:8px;box-shadow:2px 2px 0 rgba(255,255,255,.16);font-family:ui-monospace,Menlo,monospace;user-select:none;transition:transform .14s ease,box-shadow .14s ease;flex:none;cursor:pointer;appearance:none}
+.lang-switch:active{transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(255,255,255,.16)}
+.lang-slider{position:absolute;top:2px;bottom:2px;left:2px;width:calc(50% - 4px);background:var(--accent);border-radius:5px;pointer-events:none;transition:transform .3s cubic-bezier(.22,1,.36,1);z-index:1}
+.lang-switch[data-lang="en"] .lang-slider{transform:translateX(calc(100% + 4px))}
+.lang-sep{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:10px;line-height:1;color:rgba(255,255,255,.25);pointer-events:none;z-index:1}
+.lang-opt{position:relative;z-index:2;padding:4px 7px;font-family:ui-monospace,Menlo,monospace;font-size:10.5px;font-weight:700;letter-spacing:.05em;color:var(--sub);transition:color .2s ease;line-height:1;text-align:center}
+.lang-opt.is-active{color:#06281a}
+.is-typing::after{content:'▍';display:inline;color:var(--accent);margin-left:1px;font-family:ui-monospace,monospace}
+</style>
+</head>
+<body>
+<div style="position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:50;background:#fdd663;color:#2b2100;font:700 10px/1 sans-serif;padding:4px 9px;border-radius:999px;pointer-events:none" id="demoBanner">DEMO · тестовые данные</div>
+
+<div class="header">
+  <div class="hdr-top">
+    <span class="badge" id="modeBadge">MOCK</span>
+    <button class="gear" onclick="openSettings()" aria-label="Settings"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2" fill="currentColor" stroke="none"/></svg></button>
+    <div class="pill" id="pill">MONITORING</div>
+    <button type="button" class="lang-switch" id="langSwitch" aria-label="Switch language: RU / EN" data-lang="ru"><span class="lang-slider" aria-hidden="true"></span><span class="lang-sep" aria-hidden="true">|</span><span class="lang-opt is-active" data-opt="ru">RU</span><span class="lang-opt" data-opt="en">EN</span></button>
+  </div>
+  <div class="rate skeleton-pulse" id="rateBlock"><span id="hdrRate">--</span> <span class="delta" id="hdrDelta"></span></div>
+</div>
+
+<main>
+<section id="tab-term">
+  <h1 class="tab-title">Terminal</h1>
+  <div class="card spark-card skeleton-pulse" id="sparkCard">
+    <h3>USDT/RUB rate / last 60 min</h3>
+    <div class="row"><span class="v" style="font-size:20px"><span id="sparkRate">--</span></span><span class="ok" id="sparkDelta"></span></div>
+    <svg id="sparkSvg" viewBox="0 0 300 48" preserveAspectRatio="none">
+      <defs><linearGradient id="gspark" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" style="stop-color:var(--accent)"/><stop offset="1" style="stop-color:var(--accent);stop-opacity:0"/>
+      </linearGradient></defs>
+      <polygon class="spark-area" id="sparkArea" points="0,48 300,48"/>
+      <polyline class="spark-line" id="sparkLine" points="0,48 300,48"/>
+      <circle class="spark-dot" id="sparkDot" r="4" cx="0" cy="48"/>
+    </svg>
+    <div class="spark-tip" id="sparkTip"></div>
+  </div>
+
+  <div class="card">
+    <h3>Daily limits</h3>
+    <div class="row"><span class="k">Budget</span><span class="v" id="limBudget">--</span></div>
+    <div class="bar"><i id="limBudgetBar" style="width:0%"></i></div>
+    <div class="row" style="margin-top:8px"><span class="k">Deals</span><span class="v" id="limDeals">--</span></div>
+    <div class="bar"><i id="limDealsBar" style="width:0%"></i></div>
+    <div class="row" style="margin-top:8px"><span class="k">Budget left</span><span class="v ok" id="limLeft">--</span></div>
+  </div>
+
+  <div class="card deal" id="dealCard">
+    <h3 id="dealTitle">Active deal</h3>
+    <div class="row"><span class="k">Rate</span><span class="v" id="dealRate">--</span></div>
+    <div class="row"><span class="k">Amount</span><span class="v" id="dealAmount">--</span></div>
+    <div class="row"><span class="k">Payment</span><span class="v" id="dealPayment">--</span></div>
+    <div class="row"><span class="k">Seller</span><span class="v" id="dealSeller">--</span></div>
+    <div class="row"><span class="k">Stage</span><span style="display:flex;align-items:center;gap:8px">
+      <svg width="28" height="28" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15"/><circle class="ring-fg" id="dealRing" cx="18" cy="18" r="15" transform="rotate(-90 18 18)"/></svg>
+      <span class="v" id="dealStage">--</span></span></div>
+    <div class="btns dealBuy" style="flex-direction:column">
+      <div class="swipe-buy" data-swipe="buy1">
+        <div class="swipe-track"><div class="swipe-fill"></div><span class="swipe-label">Swipe to buy</span>
+          <div class="swipe-thumb"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06281a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+        </div>
+      </div>
+      <button class="btn fail" style="width:100%;padding:12px 0" onclick="act('fail')">FAIL</button>
+    </div>
+    <div class="dealConfirm hidden">
+      <div class="btns"><button class="btn buy" style="padding:22px 0;font-size:19px;font-weight:700" onclick="confirmOrder(this)">CONFIRM ORDER</button></div>
+      <div class="btns"><button class="btn ghost" style="padding:9px 0;font-size:13px;color:var(--sub)" onclick="act('fail')">Not taking it</button></div>
+    </div>
+    <div class="btns"><button class="btn ghost" onclick="cmd('screenshot').then(r=>{toast(r.ok?'shot saved + in bot':'no shot');loadGallery();})">Screenshot</button></div>
+  </div>
+
+  <div class="card">
+    <h3>Session stats</h3>
+    <div class="stat-grid skeleton-pulse" id="statGrid">
+      <div class="stat-tile"><b id="stFound">34</b><span id="stFoundLbl">found</span></div>
+      <div class="stat-tile"><b id="stOpened">9</b><span>opened</span></div>
+      <div class="stat-tile"><b id="stDone">7</b><span>deals</span></div>
+      <div class="stat-tile"><b id="stErrors" class="bad">1</b><span>errors</span></div>
+      <div class="stat-tile"><b id="stFailed" class="bad">2</b><span>failed</span></div>
+      <div class="stat-tile"><b id="stStreak">4</b><span>streak</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Rejected by filters (rate ok)</h3>
+    <div id="rejList"></div>
+  </div>
+  <div class="card">
+    <h3>Recent activity</h3>
+    <div id="actList"></div>
+  </div>
+
+  </section>
+
+<section id="tab-deals" class="hidden">
+  <h1 class="tab-title">Deals</h1>
+  <div class="card">
+    <div class="stat-grid">
+      <div class="stat-tile"><b id="sumToday">--</b><span>today</span></div>
+      <div class="stat-tile"><b id="sumVolume">--</b><span>volume</span></div>
+      <div class="stat-tile"><b class="ok" id="sumSuccess">--</b><span>success</span></div>
+    </div>
+  </div>
+  <div class="chips">
+    <button class="chip on" onclick="chip(this)" data-f="all">All</button>
+    <button class="chip" onclick="chip(this)" data-f="success">Success</button>
+    <button class="chip" onclick="chip(this)" data-f="failed">Failed</button>
+    <button class="chip" onclick="chip(this)" data-f="sbp">SBP</button>
+    <button class="chip" onclick="chip(this)" data-f="card">Card</button>
+  </div>
+  <div id="histGroups"></div>
+  <button class="btn ghost" style="width:100%" onclick="loadMore()">Load more</button>
+  <div class="btns"><button class="btn ghost" onclick="exportDeals('csv')">Export CSV</button><button class="btn ghost" onclick="exportDeals('json')">Export JSON</button></div>
+</section>
+
+<section id="tab-stats" class="hidden">
+  <h1 class="tab-title">Stats</h1>
+  <div class="seg"><button class="on" onclick="setPeriod('day',this)">Day</button><button onclick="setPeriod('week',this)">Week</button><button onclick="setPeriod('all',this)">All</button></div>
+  <div class="card">
+    <div class="row"><span class="k">Volume</span><span class="v" id="perVolume">--</span></div>
+    <div class="row"><span class="k">Avg rate</span><span class="v" id="perAvg">--</span></div>
+    <div class="row"><span class="k">Success</span><span class="v ok" id="perSuccess">--</span></div>
+    <div class="row"><span class="k">Best rate</span><span class="v ok" id="perBest">--</span></div>
+    <div class="row"><span class="k">Worst rate</span><span class="v bad" id="perWorst">--</span></div>
+  </div>
+  <div class="chart"><svg id="chartVolume" viewBox="0 0 300 120" preserveAspectRatio="none"></svg></div>
+  <div class="chart"><svg id="chartRate" viewBox="0 0 300 120" preserveAspectRatio="none"></svg></div>
+  <div class="card"><h3>Payment methods</h3><div id="payList"></div></div>
+</section>
+
+<section id="tab-log" class="hidden">
+  <h1 class="tab-title">Log</h1>
+  <div class="live"><i id="liveDot"></i> LIVE / <span id="logCount">0</span> lines this session</div>
+  <div class="chips">
+    <button class="chip on" onclick="chip(this)" data-f="all">All</button>
+    <button class="chip" onclick="chip(this)" data-f="errors">Errors</button>
+    <button class="chip" onclick="chip(this)" data-f="deals">Deals</button>
+    <button class="chip" onclick="chip(this)" data-f="browser">Browser</button>
+    <button class="chip" onclick="chip(this)" data-f="warnings">Warnings</button>
+  </div>
+  <div class="card">
+    <div class="stat-grid">
+      <div class="stat-tile"><b class="bad" id="logErr">1</b><span>errors</span></div>
+      <div class="stat-tile"><b id="logWarn" style="color:var(--yellow)">2</b><span>warnings</span></div>
+      <div class="stat-tile"><b id="logDeal">5</b><span>deals</span></div>
+    </div>
+  </div>
+  <div class="log" id="logBox"></div>
+  <div class="btns" style="margin-top:10px">
+    <button class="btn ghost" onclick="toggleFreeze(this)">Freeze</button>
+    <button class="btn ghost" onclick="downloadLog()">Export log</button>
+  </div>
+</section>
+  <section id="tab-browser" class="hidden">
+    <h1 class="tab-title">Browser</h1>
+    <div class="card">
+      <h3>Live browser view</h3>
+      <img id="liveView" style="width:100%;border-radius:16px;background:#0d1117" alt="">
+      <div class="btns"><button class="btn ghost" onclick="refreshLive()">Refresh</button><button class="btn ghost" onclick="cmd('screenshot').then(r=>toast(r.ok?'shot saved + in bot':'no shot'))">Save shot</button><button class="btn ghost" onclick="runStealth()">Stealth test</button></div>
+      <pre id="stealthInfo" style="color:var(--sub);font-size:11px;white-space:pre-wrap;margin-top:8px"></pre>
+    </div>
+  </section>
+</main>
+
+<div class="mini-deal hidden" id="miniDeal" onclick="openDeal()">
+  <svg width="30" height="30" viewBox="0 0 34 34" style="flex:none">
+    <circle cx="17" cy="17" r="15" fill="none" stroke="var(--card2)" stroke-width="3"/>
+    <circle id="dealRingMini" cx="17" cy="17" r="15" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linecap="round" stroke-dasharray="94.2" stroke-dashoffset="0" transform="rotate(-90 17 17)"/>
+  </svg>
+  <div class="mini-deal-info"><b id="miniRate">-- RUB</b><span id="miniSub">deal in progress</span></div>
+  <span class="mini-deal-cta">Open</span>
+</div>
+
+<nav>
+  <button class="on" onclick="tab('term',this)"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9l3 3-3 3"/><line x1="13" y1="15" x2="17" y2="15"/></svg><span class="lbl">Terminal</span></span></button>
+  <button onclick="tab('deals',this)"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7h11l-3-3"/><path d="M17 17H6l3 3"/></svg><span class="lbl">Deals</span></span></button>
+  <button onclick="tab('stats',this)"><span class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="12" width="4" height="8" rx="1"/><rect x="10" y="7" width="4" height="13" rx="1"/><rect x="16" y="3" width="4" height="17" rx="1"/></svg><span class="lbl">Stats</span></span></button>
+  <button onclick="tab('log',this)"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="14" y2="18"/></svg><span class="lbl">Log</span></span></button>
+  <button onclick="tab('browser',this)"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="3" y1="12" x2="21" y2="12"/><path d="M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg><span class="lbl">Browser</span></span></button>
+</nav>
+
+<div class="scrim" id="scrim" onclick="closeAll()"></div>
+
+<aside class="sheet" id="sheet">
+  <button class="close" onclick="closeAll()">&times;</button>
+  <h2>Settings</h2>
+  <div class="info">applied live, no bot restart</div>
+  <div class="group">
+    <h4><span class="grp-ic gc-accent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="9" cy="10" r="1" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1" fill="currentColor" stroke="none"/><circle cx="14" cy="15" r="1" fill="currentColor" stroke="none"/></svg></span>Appearance</h4>
+    <div class="field"><label>Accent color</label>
+      <div class="accent-row" id="accentRow">
+        <button type="button" class="accent-dot" data-hex="#81c995" data-rgb="129,201,149" style="background:#81c995"></button>
+        <button type="button" class="accent-dot" data-hex="#8ab4f8" data-rgb="138,180,248" style="background:#8ab4f8"></button>
+        <button type="button" class="accent-dot" data-hex="#c58af9" data-rgb="197,138,249" style="background:#c58af9"></button>
+        <button type="button" class="accent-dot" data-hex="#f6b26b" data-rgb="246,178,107" style="background:#f6b26b"></button>
+        <button type="button" class="accent-dot" data-hex="#f28b82" data-rgb="242,139,130" style="background:#f28b82"></button>
+      </div>
+    </div>
+  </div>
+  <div class="group">
+    <h4><span class="grp-ic gc-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></svg></span>Daily limits</h4>
+    <div class="toggle"><span>Daily limits enabled</span><div class="sw" id="dailySw" onclick="setDaily(this)"></div></div>
+    <div class="field"><label>Daily budget <b id="vBudget">15 000 RUB</b></label>
+      <input type="range" id="setBudget" min="1000" max="100000" step="500" value="15000"
+        oninput="vBudget.textContent=(+this.value).toLocaleString('en')+' RUB'"></div>
+    <div class="field"><label>Deals per day <b id="vDeals">3</b></label>
+      <input type="range" id="setDeals" min="1" max="20" value="3" oninput="vDeals.textContent=this.value"></div>
+  </div>
+  <div class="group">
+    <h4><span class="grp-ic gc-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 7-8"/><path d="M14 7h6v6"/></svg></span>Rate and amount</h4>
+    <div class="field"><label>MAX_RATE <b>86 RUB</b></label>
+      <div class="stepper"><button class="step-btn" onclick="stepInput('setMaxRate',-0.5)">−</button><input type="number" id="setMaxRate" value="86"><button class="step-btn" onclick="stepInput('setMaxRate',0.5)">+</button></div>
+    </div>
+    <div class="field"><label>MIN_RATE <b>50 RUB</b></label>
+      <div class="stepper"><button class="step-btn" onclick="stepInput('setMinRate',-0.5)">−</button><input type="number" id="setMinRate" value="50"><button class="step-btn" onclick="stepInput('setMinRate',0.5)">+</button></div>
+    </div>
+    <div class="field"><label>Amount min / max <b>9000 / 11500</b></label>
+      <div class="stepper"><button class="step-btn" onclick="stepInput('setAmtMin',-100)">−</button><input type="number" id="setAmtMin" value="9000"><button class="step-btn" onclick="stepInput('setAmtMin',100)">+</button></div>
+    </div>
+    <div class="field">
+      <div class="stepper"><button class="step-btn" onclick="stepInput('setAmtMax',-100)">−</button><input type="number" id="setAmtMax" value="11500"><button class="step-btn" onclick="stepInput('setAmtMax',100)">+</button></div>
+    </div>
+  </div>
+  <div class="group">
+    <h4><span class="grp-ic gc-yellow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="8" width="20" height="8" rx="4"/><circle cx="16" cy="12" r="2.5" fill="currentColor" stroke="none"/></svg></span>Modes</h4>
+    <div class="toggle">
+      <span>Auto-buy<br><small style="color:var(--sub);font-size:11px">presses Confirm itself / off = waits for your g-f</small></span>
+      <div class="sw" id="autoSw" onclick="setAuto(this)"></div>
+    </div>
+    <div class="warn hidden" id="autoWarn">! bridge accepts deal terms without your check. You still send the fiat yourself, but rate/seller/method are already approved. Enable only when you trust the limits.</div>
+    <div class="toggle" style="margin-top:6px"><span>Headless (no window)</span><div class="sw" id="headSw" onclick="setHead(this)"></div></div>
+  </div>
+  <div class="group">
+    <h4><span class="grp-ic gc-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></span>Payments</h4>
+    <div class="field"><label>White list (comma, empty = all)</label><input type="text" id="setPayWhite"></div>
+    <div class="field"><label>Black list (comma)</label><input type="text" id="setPayBlack"></div>
+    <div class="btns"><button class="btn ghost" onclick="clearPayLists()">Allow all payments</button></div>
+  </div>
+  <div class="group">
+    <h4><span class="grp-ic gc-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/></svg></span>Safety</h4>
+    <div class="field"><label>Errors in a row -> pause</label>
+      <div class="stepper"><button class="step-btn" onclick="stepInput('setErrPause',-1)">−</button><input type="number" id="setErrPause"><button class="step-btn" onclick="stepInput('setErrPause',1)">+</button></div>
+    </div>
+    <div class="field"><label>Errors in a row -> full stop</label>
+      <div class="stepper"><button class="step-btn" onclick="stepInput('setErrStop',-1)">−</button><input type="number" id="setErrStop"><button class="step-btn" onclick="stepInput('setErrStop',1)">+</button></div>
+    </div>
+    <div class="field"><label>Pause duration, sec</label>
+      <div class="stepper"><button class="step-btn" onclick="stepInput('setPauseSec',-5)">−</button><input type="number" id="setPauseSec"><button class="step-btn" onclick="stepInput('setPauseSec',5)">+</button></div>
+    </div>
+  </div>
+  <div class="group">
+    <h4><span class="grp-ic gc-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg></span>Device and crypto</h4>
+    <div class="field"><label>Device (browser restarts)</label><div class="dd" id="ddDevice"></div></div>
+    <div class="field"><label>Crypto</label><div class="dd" id="ddCrypto"></div></div>
+  </div>
+  <div class="group">
+    <h4><span class="grp-ic gc-grey"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-5M12 8h.01"/></svg></span>System</h4>
+    <div class="field"><label>Language</label><div class="seg lang-seg" style="margin-top:6px"><button type="button" data-lang="en" class="on" onclick="setLang('en')">EN</button><button type="button" data-lang="ru" onclick="setLang('ru')">RU</button></div></div>
+    <div class="info">
+      <span id="sysInfo">...</span>
+    </div>
+  </div>
+  <div class="group danger">
+    <h4><span class="grp-ic gc-red"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9c.6-1 2-1 2.6 0l8.3 14.3c.6 1-.1 2.3-1.3 2.3H3.3c-1.2 0-1.9-1.3-1.3-2.3L10.3 3.9z"/><path d="M12 9.5v4M12 16.8h.01"/></svg></span>Danger zone</h4>
+    <div class="btns"><button class="btn" onclick="cmd('kill_browser');toast('restart requested')">Kill browser</button></div>
+    <div class="btns"><button class="btn solid" onclick="cmd('reset_limits');toast('limits reset')">Reset limits</button></div>
+  </div>
+</aside>
+
+<div class="modal" id="dealModal">
+  <div class="grab"></div>
+  <h3 style="margin:0 0 10px">Deal waiting / #11566</h3>
+  <div class="row"><span class="k">Rate</span><span class="v" id="mRate">--</span></div>
+  <div class="row"><span class="k">Amount</span><span class="v" id="mAmount">--</span></div>
+  <div class="row"><span class="k">Payment</span><span class="v" id="mPayment">--</span></div>
+  <div class="row"><span class="k">Seller</span><span class="v" id="mSeller">--</span></div>
+  <div class="row"><span class="k">Waiting</span><span style="display:flex;align-items:center;gap:8px">
+    <svg width="28" height="28" viewBox="0 0 36 36"><circle class="ring-bg" cx="18" cy="18" r="15"/><circle class="ring-fg" id="dealRingM" cx="18" cy="18" r="15" transform="rotate(-90 18 18)"/></svg>
+    <span class="v" id="mWait">--</span></span></div>
+  <div class="btns dealBuy" style="flex-direction:column">
+    <div class="swipe-buy" data-swipe="buy2">
+      <div class="swipe-track"><div class="swipe-fill"></div><span class="swipe-label">Swipe to buy</span>
+        <div class="swipe-thumb"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#06281a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></div>
+      </div>
+    </div>
+    <button class="btn fail" style="width:100%;padding:12px 0" onclick="act('fail');closeAll()">FAIL</button>
+  </div>
+  <div class="dealConfirm hidden">
+    <div class="btns"><button class="btn buy" style="padding:22px 0;font-size:19px;font-weight:700" onclick="confirmOrder(this)">CONFIRM ORDER</button></div>
+    <div class="btns"><button class="btn ghost" style="padding:9px 0;font-size:13px;color:var(--sub)" onclick="act('fail');closeAll()">Not taking it</button></div>
+  </div>
+  <div class="btns"><button class="btn ghost" onclick="cmd('screenshot').then(r=>{toast(r.ok?'shot saved + in bot':'no shot');loadGallery();})">Show screen</button></div>
+</div>
+
+<div class="modal" id="histModal">
+  <div class="grab"></div>
+  <h3 style="margin:0 0 4px" id="histTitle">Deal</h3>
+  <div class="info" id="histSub" style="margin-bottom:10px"></div>
+  <div class="timeline" id="histTimeline"></div>
+  <div class="shots" id="shotsBox"></div>
+  <div class="btns"><button class="btn ghost" onclick="dealCsv(CUR_HIST)">Deal CSV</button></div>
+</div>
+
+<div class="fullov" id="fullOverlay" onclick="this.classList.remove('open')"><img id="fullImg"></div>
+<div class="toastbox" id="toastbox"></div>
+
+<script>
+/* DEMO BRIDGE: все запросы терминала обслуживаются локально, сеть не используется */
+(function(){
+var DAY=86400000, now=Date.now();
+var iso=function(t){return new Date(t).toISOString().slice(0,10)};
+var hm=function(t){return new Date(t).toTimeString().slice(0,8)};
+var rate=81.42, delta=0.18, series=[], paused=false, deal=null, nextDeal=now+9000, cnt=4;
+for(var i=0;i<30;i++){series.push(+(80.6+Math.sin(i/4)*0.5+i*0.03).toFixed(2));}
+var pays=['СБП','Т-Банк','Сбербанк','СБП','Альфа-Банк'];
+var hist=[], days=[];
+for(var d=0;d<14;d++){var ok=2+(d*3)%4, tot=ok+(d%3==0?1:0);
+  days.push({day:iso(now-d*DAY),vol:ok*10100+(d*370)%2000,ok:ok,tot:tot,avg_rate:+(81.2-d*0.07).toFixed(2),best:+(80.4-d*0.05).toFixed(2),worst:+(82.1-d*0.04).toFixed(2)});
+  for(var k=0;k<Math.min(ok,3);k++){var t=now-d*DAY-k*5400000;
+    hist.push({day:iso(t),time:hm(t).slice(0,5),rate:+(81.3-d*0.06+k*0.1).toFixed(2),sum:9800+k*650,pay:pays[(d+k)%5],res:(d+k)%7==3?'bad':'ok',offer:'o'+d+k,order:String(47000+d*10+k),ts:t/1000});}}
+var st={budget:15000,deals:3,max_rate:86,min_rate:50,amount_min:9000,amount_max:11500,auto_buy:false,headless:true,pay_white:'',pay_black:'',err_pause:3,err_stop:5,pause_sec:300,devices:['Pixel 7','iPhone 14','Desktop'],device:'Pixel 7',cryptos:['USDT','BTC','TON'],crypto:'USDT',daily_enabled:true};
+var act=[{kind:'ok',text:'Сделка #47012 закрыта по 81.10',time:'12:41'},{kind:'info',text:'Мост подключен, мониторинг запущен',time:'09:00'}];
+var logs=[{t:'09:00:01',level:'info',msg:'bridge started (demo)'},{t:'09:00:04',level:'browser',msg:'browser session ready'},{t:'12:41:10',level:'deal',msg:'deal #47012 recorded'}];
+var rej=[{price:79.9,seller:'trader_a***',payment:'СБП',min:500,max:4000,reason:'amount out of range',id:'r1',ts:now/1000-300},{price:84.2,seller:'trader_m***',payment:'Сбербанк',min:9000,max:20000,reason:'rate above max',id:'r2',ts:now/1000-900}];
+function log(l,m){logs.push({t:hm(Date.now()),level:l,msg:m});if(logs.length>120)logs.shift();}
+function tick(){var t=Date.now();rate=+(rate+(Math.random()-0.5)*0.12).toFixed(2);delta=+(delta+(Math.random()-0.5)*0.04).toFixed(2);series.push(rate);series.shift();
+  if(deal){deal.since+=2;deal.deadline=Math.max(0,deal.deadline-2);}
+  else if(!paused&&t>nextDeal){deal={order:String(48200+(cnt++)),rate:+(rate-0.15).toFixed(2),amount:10400,payment:'СБП',seller:'trader_k***',stage:'waiting payment',since:0,deadline:840,need_confirm:false};log('deal','offer picked, order #'+deal.order);}}
+function state(){tick();var spent=days[0].vol%15000, done=days[0].ok;
+  return{status:paused?'paused':(deal?'deal':'monitoring'),rate:rate,rate_delta:delta,rate_series:series,budget_spent:spent,budget_max:st.budget,deals_done:done%st.deals,deals_max:st.deals,deal:deal,offers_count:12,
+  stats:{found:37,opened:9,done:done,errors:1,failed:1,streak:4},history:hist.slice(0,40),days:days,
+  period:{payments:[{name:'СБП',rate:96,avg_sec:18},{name:'Т-Банк',rate:91,avg_sec:11},{name:'Сбербанк',rate:88,avg_sec:7}]},
+  activity:act,log_lines:logs,log_counts:{err:1,warn:2,deal:logs.filter(function(x){return x.level==='deal'}).length},rejected:rej,settings:st,
+  system:{device:st.device,version:'demo-1.0',uptime:'3d 4h',session:'demo'}};}
+function done(res){var h=deal;deal=null;nextDeal=Date.now()+40000;
+  act.unshift({kind:res==='ok'?'ok':'bad',text:'Сделка #'+h.order+(res==='ok'?' закрыта по ':' отклонена ')+h.rate,time:hm(Date.now()).slice(0,5)});
+  hist.unshift({day:iso(Date.now()),time:hm(Date.now()).slice(0,5),rate:h.rate,sum:h.amount,pay:h.payment,res:res,offer:'n'+h.order,order:h.order,ts:Date.now()/1000});
+  log('deal','deal #'+h.order+' '+res);}
+function command(c,a){a=a||{};
+  if(c==='set_setting'){st[a.key]=a.value;return{ok:true};}
+  if(c==='pause'){paused=true;return{ok:true};} if(c==='resume'){paused=false;return{ok:true};}
+  if(c==='confirm_buy'&&deal){done('ok');return{ok:true};} if(c==='confirm_fail'&&deal){done('bad');return{ok:true};}
+  if(c==='confirm_order'){return{ok:true};}
+  if(c==='timeline'){return{ok:true,items:[{key:'started',state:'done',t:'12:38:02'},{key:'confirmed',state:'done',t:'12:39:40'},{key:'recorded',state:'done',t:'12:41:10'}]};}
+  if(c==='get_history'){return{ok:true,items:[]};}
+  return{ok:true,demo:true};}
+var realFetch=window.fetch;
+window.fetch=function(u,o){var p=String(u).split('?')[0],body=null,out;
+  try{body=o&&o.body?JSON.parse(o.body):null;}catch(e){}
+  if(p==='/state')out=state(); else if(p==='/command')out=command(body&&body.cmd,body&&body.args);
+  else if(p==='/gallery')out={items:[]}; else out={ok:false,demo:true};
+  return Promise.resolve(new Response(JSON.stringify(out),{status:200,headers:{'Content-Type':'application/json'}}));};
+})();
+</script>
+<script>
+const tg = window.Telegram && window.Telegram.WebApp;
+
+function initTG(){
+  if (!tg) return;
+  try { tg.ready(); tg.expand(); } catch(e){}
+  if (tg.setHeaderColor) tg.setHeaderColor('#000000');
+  if (tg.setBackgroundColor) tg.setBackgroundColor('#000000');
+  if (tg.BackButton) tg.BackButton.hide();
+}
+
+let STATE=null, SETTINGS_LOADED=false, HIST_F='all', LOG_F='all';
+let FIRST_RENDER=true, PREV_RATE=null, LAST_SERIES=[];
+const RING_C=94.2;
+const $=id=>document.getElementById(id);
+const fmtN=n=>n==null?'--':Number(n).toLocaleString('en');
+const mmss=s=>{s=Math.max(0,s|0);return String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+function audit(line){try{fetch(api('/command'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:'audit',args:{line:line}})});}catch(e){}}
+const AUDIT_MAP={confirm_buy:'BUY',confirm_fail:'FAIL',pause:'PAUSE',resume:'RESUME',kill_browser:'KILLBR',reset_limits:'RESETLIM',screenshot:'SHOT',export_csv:'EXPcsv',export_json:'EXPjson'};
+function auditFor(c,a){let tag=AUDIT_MAP[c];if(!tag&&c==='set_setting'&&a){tag='SET '+a.key+'='+String(a.value).slice(0,24);}if(!tag)return;let extra='';if((tag==='BUY'||tag==='FAIL')&&STATE&&STATE.deal){extra=' #'+STATE.deal.order+' '+STATE.deal.rate;}audit((tag+extra).slice(0,64));}
+async function cmd(c,a){auditFor(c,a);try{const r=await fetch(api('/command'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cmd:c,args:a||{}})});return await r.json();}catch(e){return{ok:false};}}
+const QKEY=(new URLSearchParams(location.search).get('key'))||'';
+function api(u){const t=sessionStorage.getItem('btok')||'';const sep=u.indexOf('?')>=0?'&':'?';if(t)return u+sep+'token='+encodeURIComponent(t);if(QKEY)return u+sep+'key='+encodeURIComponent(QKEY);return u;}
+async function poll(){if(LOCKED)return;try{const r=await fetch(api('/state'));STATE=await r.json();render();dealWatch();}catch(e){$('modeBadge').textContent='NO BRIDGE';}}
+function setPill(st){const p=$('pill');const m={monitoring:['','MONITORING'],paused:['paused','PAUSED'],deal:['deal','DEAL'],offline:['off','OFFLINE']}[st]||['off','OFFLINE'];p.className='pill '+m[0];p.textContent=m[1];p.onclick=()=>cmd(st==='paused'?'resume':'pause');}
+function spark(se){const el=$('sparkLine'),ar=$('sparkArea');if(!se||se.length<2)return;LAST_SERIES=se;const mn=Math.min.apply(null,se),mx=Math.max.apply(null,se),rg=(mx-mn)||1;const pts=se.map((v,i)=>(i*(300/(se.length-1))).toFixed(1)+','+(46-((v-mn)/rg)*40).toFixed(1)).join(' ');el.setAttribute('points',pts);ar.setAttribute('points',pts+' 300,48 0,48');}
+function icoSvg(kind){const P={ok:'<path d="M5 13l4 4L19 7"/>',bad:'<path d="M6 6l12 12M18 6L6 18"/>',warn:'<path d="M12 3l9.5 17H2.5L12 3z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/>',info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5"/><circle cx="12" cy="8" r="0.6" fill="currentColor"/>'};return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">'+(P[kind]||P.info)+'</svg>';}
+function renderActivity(){const b=$('actList');b.innerHTML='';(STATE.activity||[]).forEach(a=>{const d=document.createElement('div');d.className='act-row';d.innerHTML='<div class="act-ic '+a.kind+'">'+icoSvg(a.kind)+'</div><div class="act-tx">'+a.text+'<span class="tm">'+a.time+'</span></div>';b.appendChild(d);});}
+function renderHistory(){const b=$('histGroups');b.innerHTML='';let h=histAll();if(!h.length){b.innerHTML=emptyState('info','no deal history yet');return;}if(HIST_F==='success')h=h.filter(x=>x.res==='ok');if(HIST_F==='failed')h=h.filter(x=>x.res==='bad');if(HIST_F==='sbp')h=h.filter(x=>/СБП|SBP/i.test(x.pay));if(HIST_F==='card')h=h.filter(x=>/Т-Банк|Сбербанк|ВТБ|Альфа|Карта|Card/i.test(x.pay));let day=null,card=null;CURRENT_HIST=h;h.forEach((x,i)=>{if(x.day!==day){day=x.day;const hd=document.createElement('div');hd.className='day-head';hd.textContent=day;b.appendChild(hd);card=document.createElement('div');card.className='card list';b.appendChild(card);}const d=document.createElement('div');d.className='item';d.onclick=()=>openHist(i);d.innerHTML='<div class="act-ic '+(x.res==='ok'?'ok':'bad')+'" style="width:36px;height:36px">'+icoSvg(x.res==='ok'?'ok':'bad')+'</div><div class="col" style="flex:1"><span>'+x.time+' / '+x.rate+' RUB / '+x.sum+' RUB</span><span class="sub">'+x.pay+'</span></div><span class="'+(x.res==='ok'?'ok':'bad')+'">'+(x.res==='ok'?'bought':'failed')+'</span>';card.appendChild(d);});}
+function renderLog(){if(LOG_FROZEN)return;const b=$('logBox');b.innerHTML='';let L=(STATE.log_lines||[]).slice();const c=STATE.log_counts||{};$('logErr').textContent=c.err||0;$('logWarn').textContent=c.warn||0;$('logDeal').textContent=c.deal||0;if(LOG_F==='errors')L=L.filter(x=>x.level==='error');if(LOG_F==='deals')L=L.filter(x=>x.level==='deal');if(LOG_F==='browser')L=L.filter(x=>x.level==='browser');if(LOG_F==='warnings')L=L.filter(x=>x.level==='warn');L.slice(-80).forEach(o=>{const d=document.createElement('div');d.className='log-row'+(o.level==='error'?' log-err':'');d.innerHTML=o.t+' <span class="lvl lvl-'+o.level+'">['+o.level.toUpperCase()+']</span> '+o.msg;d.onclick=function(){const txt=o.t+' ['+o.level.toUpperCase()+'] '+o.msg;if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(()=>toast('copied')).catch(()=>{});}};b.appendChild(d);});b.scrollTop=b.scrollHeight;$('logCount').textContent=(STATE.log_lines||[]).length;}
+function openStat(kind){var m=document.getElementById('statModal');if(!m){m=document.createElement('div');m.id='statModal';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99;display:flex;align-items:flex-end;justify-content:center';m.onclick=function(e){if(e.target===m)m.remove();};document.body.appendChild(m);}var st=(STATE&&STATE.settings)||{};var S=STATE||{};var html='<div style="background:var(--card);width:100%;max-width:520px;border-radius:24px 24px 0 0;padding:18px 16px 24px;max-height:82vh;overflow:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><b style="font-size:16px" id="statTitle"></b><span onclick="document.getElementById(\'statModal\').remove()" style="cursor:pointer;color:var(--sub);font-size:24px">&times;</span></div><div id="statBody"></div></div>';m.innerHTML=html;var T=$('statTitle'),B=$('statBody');var items=[],title='';if(kind==='found'){title='Найдено ('+((S.stats||{}).found||0)+')';var all=(S.rejected||[]).concat(S.history||[]).sort(function(a,b){return (b.ts||0)-(a.ts||0);});items=all.map(function(x){return '<div style="padding:10px 0"><div style="color:var(--sub);font-size:11px">'+(x.ts?new Date(x.ts*1000).toLocaleString():'')+'</div><div><b>'+(x.price||x.rate||'?')+'</b> | '+(x.seller||'?')+' | '+(x.payment||'')+'</div><div style="color:var(--yellow);font-size:12px">'+(x.reason||x.stage||'')+'</div></div>';});}else if(kind==='opened'){title='Открыто ('+((S.stats||{}).opened||0)+')';if(S.deal){items.push('<div style="padding:10px 0"><div style="color:var(--green);font-size:11px">АКТИВНАЯ</div><div><b>'+S.deal.rate+'</b> | '+S.deal.seller+' | '+S.deal.payment+'</div><div style="font-size:12px">'+S.deal.stage+' / '+S.deal.amount+' RUB</div></div>');}(S.history||[]).slice(-5).reverse().forEach(function(x){items.push('<div style="padding:10px 0"><div style="font-size:11px">'+(x.ts?new Date(x.ts*1000).toLocaleString():'')+'</div><div><b>'+x.rate+'</b> | '+x.seller+'</div></div>');});}else if(kind==='deals'){title='Сделки ('+((S.stats||{}).done||0)+')';(S.history||[]).slice().reverse().forEach(function(x){items.push('<div style="padding:10px 0"><div style="font-size:11px">'+(x.ts?new Date(x.ts*1000).toLocaleString():'')+'</div><div><b>'+x.rate+'</b> | '+x.seller+' | '+x.amount+' RUB</div><div style="color:var(--green);font-size:12px">'+(x.stage||'ok')+'</div></div>');});}else if(kind==='errors'){title='Ошибки ('+((S.stats||{}).errors||0)+')';(S.activity||[]).filter(function(a){return a.kind==='error';}).forEach(function(a){items.push('<div style="padding:10px 0;color:var(--red)"><div style="font-size:11px">'+(a.ts||'')+'</div>'+a.text+'</div>');});}else if(kind==='failed'){title='Сорвалось ('+((S.stats||{}).failed||0)+')';(S.activity||[]).filter(function(a){return /сорв|fail|cancel/i.test(a.text||'');}).forEach(function(a){items.push('<div style="padding:10px 0;color:var(--yellow)"><div style="font-size:11px">'+(a.ts||'')+'</div>'+a.text+'</div>');});}else if(kind==='streak'){title='Серия: '+((S.stats||{}).streak||0);var last=(S.history||[])[(S.history||[]).length-1];if(last){items.push('<div style="padding:10px 0"><div style="font-size:11px">'+(last.ts?new Date(last.ts*1000).toLocaleString():'')+'</div><div><b>'+last.rate+'</b> | '+last.seller+'</div></div>');}else{items.push('<div style="color:var(--sub)">нет данных</div>');}}T.textContent=title;B.innerHTML=items.length?items.join(''):'<div style="color:var(--sub)">пусто</div>';}
+function renderStats(){const ds=periodDays();let vol=0,ok=0,tot=0,wsum=0,best=null,worst=null;ds.forEach(d=>{vol+=d.vol||0;ok+=d.ok||0;tot+=d.tot||0;if(d.ok&&d.avg_rate){wsum+=d.avg_rate*d.ok;}if(d.best!=null&&(best==null||d.best<best))best=d.best;if(d.worst!=null&&(worst==null||d.worst>worst))worst=d.worst;});$('perVolume').textContent=fmtN(Math.round(vol))+' RUB';$('perAvg').textContent=(ok?(wsum/ok).toFixed(2):'--')+' RUB';$('perSuccess').textContent=(tot?Math.round(100*ok/tot)+'%':'--');$('perBest').textContent=(best!=null?best.toFixed(2):'--')+' RUB';$('perWorst').textContent=(worst!=null?worst.toFixed(2):'--')+' RUB';const P=STATE.period||{};const pl=$('payList');pl.innerHTML='';(P.payments||[]).forEach(p=>{const d=document.createElement('div');d.style.margin='0 0 12px';d.innerHTML='<div class="row" style="padding:2px 0"><span class="k">'+p.name+'</span><span class="v">'+p.rate+'% / '+p.avg_sec+' deals</span></div><div class="bar"><i style="width:'+Math.max(2,Math.min(100,p.rate))+'%;background:var(--accent)"></i></div>';pl.appendChild(d);});drawCharts();}
+function syncSwitches(){var st=(STATE&&STATE.settings)||{};var a=$('autoSw');if(a){if(st.auto_buy)a.classList.add('on');else a.classList.remove('on');}var h=$('headSw');if(h){if(st.headless)h.classList.add('on');else h.classList.remove('on');}var d=$('dailySw');if(d){if(st.daily_enabled)d.classList.add('on');else d.classList.remove('on');}}
+function loadSettings(){const st=STATE.settings||{};$('setBudget').value=st.budget||15000;$('vBudget').textContent=fmtN(st.budget)+' RUB';$('setDeals').value=st.deals||3;$('vDeals').textContent=st.deals||3;$('setMaxRate').value=st.max_rate||86;$('setMinRate').value=st.min_rate||50;$('setAmtMin').value=st.amount_min||9000;$('setAmtMax').value=st.amount_max||11500;if(st.auto_buy){$('autoSw').classList.add('on');}else{$('autoSw').classList.remove('on');}if(st.headless){$('headSw').classList.add('on');}else{$('headSw').classList.remove('on');}$('setPayWhite').value=st.pay_white||'';$('setPayBlack').value=st.pay_black||'';$('setErrPause').value=st.err_pause!=null?st.err_pause:3;$('setErrStop').value=st.err_stop!=null?st.err_stop:5;$('setPauseSec').value=st.pause_sec!=null?st.pause_sec:300;buildDropdown('ddDevice',st.devices||[],st.device,function(v){cmd('set_setting',{key:'device',value:v});toast('device changed, browser restarting');});buildDropdown('ddCrypto',st.cryptos||[],st.crypto,function(v){cmd('set_setting',{key:'crypto',value:v});toast('crypto: '+v);});if(st.daily_enabled)$('dailySw').classList.add('on');else $('dailySw').classList.remove('on');$('sysInfo').innerHTML='device: <b>'+(STATE.system&&STATE.system.device)+'<br>version: <b>'+(STATE.system&&STATE.system.version)+' (J2)<br>uptime: <b>'+(STATE.system&&STATE.system.uptime)+'<br>session: <b class="'+(STATE.system&&STATE.system.session_ok?'ok':'bad')+'">'+(STATE.system&&STATE.system.session_ok?'alive':'no token')+'</b>';SETTINGS_LOADED=true;}
+function updateRing(id,deadline){const ring=$(id);if(!ring)return;const pct=Math.max(0,Math.min(1,(deadline||0)/900));ring.style.strokeDashoffset=(RING_C*(1-pct)).toFixed(1);ring.classList.toggle('low',deadline!=null&&deadline<=300);}
+function render(){const S=STATE;if(!S)return;$('modeBadge').textContent='LIVE';if(PREV_RATE!=null&&S.rate!=null&&S.rate!==PREV_RATE){const el=$('hdrRate');el.classList.remove('flash-up','flash-down');void el.offsetWidth;el.classList.add(S.rate>PREV_RATE?'flash-up':'flash-down');setTimeout(()=>el.classList.remove('flash-up','flash-down'),700);}if(S.rate!=null)PREV_RATE=S.rate;$('hdrRate').textContent=(S.rate==null?'--':S.rate.toFixed(2))+' RUB';const d=S.rate_delta||0;$('hdrDelta').textContent=(d>=0?'+':'')+d.toFixed(2)+'/hr';$('sparkRate').textContent=(S.rate==null?'--':S.rate.toFixed(2))+' RUB';$('sparkDelta').textContent=(d>=0?'+':'')+d.toFixed(2);spark(S.rate_series);setPill(S.status);$('limBudget').textContent=fmtN(S.budget_spent)+' / '+fmtN(S.budget_max)+' RUB';const bp=S.budget_max?Math.min(100,100*S.budget_spent/S.budget_max):0;$('limBudgetBar').style.width=bp+'%';$('limBudgetBar').style.background=bp>=90?'var(--red)':bp>=70?'var(--yellow)':'var(--green)';$('limDeals').textContent=S.deals_done+' / '+S.deals_max;const dp=S.deals_max?Math.min(100,100*S.deals_done/S.deals_max):0;$('limDealsBar').style.width=dp+'%';$('limDealsBar').style.background=dp>=90?'var(--red)':dp>=70?'var(--yellow)':'var(--green)';$('limLeft').textContent=fmtN(Math.max(0,S.budget_max-S.budget_spent))+' RUB';const dc=$('dealCard');if(S.deal){dc.classList.remove('hidden');$('dealTitle').textContent='Active deal / order #'+S.deal.order;$('dealRate').textContent=S.deal.rate+' RUB';$('dealAmount').textContent=fmtN(S.deal.amount)+' RUB';$('dealPayment').textContent=S.deal.payment||'--';$('dealSeller').textContent=S.deal.seller||'--';$('dealStage').textContent=(S.deal.stage||'')+' / '+mmss(S.deal.since)+' / left '+mmss(S.deal.deadline);$('dealStage').className='v'+((S.deal.deadline!=null&&S.deal.deadline<=300)?' bad blink':'');updateRing('dealRing',S.deal.deadline);dealButtons(S.deal);}else dc.classList.add('hidden');const st=S.stats||{};$('stFound').textContent=st.found;if(S.offers_count!=null&&$('stFoundLbl'))$('stFoundLbl').textContent='found · '+S.offers_count+' now';$('stOpened').textContent=st.opened;$('stDone').textContent=st.done;$('stErrors').textContent=st.errors;$('stFailed').textContent=st.failed;$('stStreak').textContent=st.streak;renderActivity();renderHistory();renderLog();renderStats();renderRejected();loadSettings();syncSwitches();liveViewTick();i18n();updateMiniDeal();if(FIRST_RENDER){FIRST_RENDER=false;document.querySelectorAll('.skeleton-pulse').forEach(e=>e.classList.remove('skeleton-pulse'));}}
+function tab(name,el){document.querySelectorAll('main section').forEach(s=>s.classList.add('hidden'));const sec=$('tab-'+name);sec.classList.remove('hidden');sec.classList.remove('fade-in');void sec.offsetWidth;sec.classList.add('fade-in');document.querySelectorAll('nav button').forEach(b=>b.classList.remove('on'));el.classList.add('on');if(name==='browser'){startStream();}else{stopStream();}haptic('light');updateMiniDeal();}
+function updateMiniDeal(){const el=$('miniDeal');if(!el)return;const d=STATE&&STATE.deal;if(d&&currentTabIndex()!==0){el.classList.remove('hidden');$('miniRate').textContent=d.rate+' RUB / '+fmtN(d.amount)+' RUB';$('miniSub').textContent=(d.stage||'')+' · left '+mmss(d.deadline);updateRing('dealRingMini',d.deadline);}else{el.classList.add('hidden');}}
+function chip(el){el.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');const f=el.getAttribute('data-f')||el.textContent.toLowerCase();if(el.closest('#tab-log')){LOG_F=f;renderLog();}else{HIST_F=f;renderHistory();}haptic('light');}
+/* MANUAL_CONFIRM_PATCH */
+function dealButtons(d){const need=!!(d&&d.need_confirm);document.querySelectorAll('.dealBuy').forEach(e=>e.classList.toggle('hidden',need));document.querySelectorAll('.dealConfirm').forEach(e=>e.classList.toggle('hidden',!need));}
+async function confirmOrder(btn){btn.disabled=true;haptic('light');const r=await cmd('confirm_order');if(r&&r.ok){haptic('success');toast('order confirmed');if(STATE&&STATE.deal)STATE.deal.need_confirm=false;dealButtons(STATE&&STATE.deal);}else{haptic('error');toast((r&&r.error)||'confirm failed');}btn.disabled=false;}
+async function act(kind){haptic(kind==='buy'?'success':'error');const r=await cmd(kind==='buy'?'confirm_buy':'confirm_fail');if(r&&r.ok===false&&r.error){haptic('error');toast(r.error);return;}const p=$('pill');p.textContent='MONITORING';p.className='pill';$('dealCard').classList.add('hidden');toast(kind==='buy'?'-> BUY sent':'-> FAIL sent');}
+function openSettings(){$('sheet').classList.add('open');$('scrim').classList.add('open');haptic('light');i18n();}
+function openDeal(){const d=STATE&&STATE.deal;if(d){$('mRate').textContent=d.rate+' RUB';$('mAmount').textContent=fmtN(d.amount)+' RUB';$('mPayment').textContent=d.payment||'--';$('mSeller').textContent=d.seller||'--';$('mWait').textContent=mmss(d.since)+' / left '+mmss(d.deadline);updateRing('dealRingM',d.deadline);}loadGallery();$('dealModal').classList.add('open');$('scrim').classList.add('open');haptic('warning');i18n();}
+function openHist(i){/*replaced by blockB*/}
+function closeAll(){['sheet','dealModal','histModal'].forEach(id=>$(id).classList.remove('open'));$('scrim').classList.remove('open');}
+async function setAuto(el){const cur=el.classList.contains('on');const on=!cur;try{const r=await cmd('set_setting',{key:'auto_buy',value:on});if(r&&r.ok){if(on)el.classList.add('on');else el.classList.remove('on');$('autoWarn').classList.toggle('hidden',!on);haptic(on?'warning':'light');}else{if(!on)el.classList.add('on');else el.classList.remove('on');}}catch(e){if(!on)el.classList.add('on');else el.classList.remove('on');}}
+async function setHead(el){const on=!el.classList.contains('on');try{const r=await cmd('set_setting',{key:'headless',value:on});if(r&&r.ok){if(on)el.classList.add('on');else el.classList.remove('on');toast(on?'browser runs in xvfb only':'mirror to Termux:X11');}else{toast((r&&r.error)||'cannot switch');}}catch(e){toast('cannot switch');}}
+function stepInput(id,delta){const el=$(id);if(!el)return;const dec=(String(delta).split('.')[1]||'').length;let v=(parseFloat(el.value)||0)+delta;if(dec)v=+v.toFixed(dec);if(v<0)v=0;el.value=v;el.dispatchEvent(new Event('change'));haptic('light');}
+function emptyState(icon,text){return '<div class="empty-state"><div class="ic">'+icoSvg(icon)+'</div><span>'+text+'</span></div>';}
+function wireInputs(){const bind=(id,key,parse)=>{const el=$(id);if(!el)return;el.addEventListener('change',()=>{cmd('set_setting',{key:key,value:parse(el.value)});toast(key+' -> '+el.value);});};bind('setBudget','budget',v=>+v);bind('setDeals','deals',v=>+v);bind('setMaxRate','max_rate',v=>+v);bind('setMinRate','min_rate',v=>+v);bind('setAmtMin','amount_min',v=>+v);bind('setAmtMax','amount_max',v=>+v);$('setBudget').addEventListener('input',e=>{$('vBudget').textContent=(+e.target.value).toLocaleString('en')+' RUB';});bind('setErrPause','err_pause',v=>+v);bind('setErrStop','err_stop',v=>+v);bind('setPauseSec','pause_sec',v=>+v);$('setPayWhite').addEventListener('change',e=>{cmd('set_setting',{key:'pay_white',value:e.target.value});toast('white list saved');});$('setPayBlack').addEventListener('change',e=>{cmd('set_setting',{key:'pay_black',value:e.target.value});toast('black list saved');});}
+function haptic(t){if(tg&&tg.HapticFeedback){if(t==='light'||t==='warning')tg.HapticFeedback.impactOccurred(t);else tg.HapticFeedback.notificationOccurred(t);}}
+let toastTimer=null;
+function toast(m){const t=$('toastbox');t.textContent=tr(m);t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),1800);}
+let AC=null,PREV_STATUS=null,LAST_REMIND=0;
+function beep(pat){try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();if(AC.state==='suspended')AC.resume();const t0=AC.currentTime;pat.forEach(p=>{const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.setValueAtTime(p[0],t0+p[2]);o.frequency.linearRampToValueAtTime(p[1],t0+p[2]+0.25);g.gain.setValueAtTime(0.0001,t0+p[2]);g.gain.exponentialRampToValueAtTime(0.4,t0+p[2]+0.05);g.gain.exponentialRampToValueAtTime(0.0001,t0+p[2]+0.45);o.connect(g);g.connect(AC.destination);o.start(t0+p[2]);o.stop(t0+p[2]+0.5);});}catch(e){}}
+const BEEP_DEAL=[[200,400,0],[200,400,0.6],[200,400,1.2]];
+const BEEP_REMIND=[[600,300,0],[600,300,0.5]];
+function notify(t,b){if(!('Notification' in window))return;if(Notification.permission==='granted'){try{new Notification(tr(t),{body:tr(b)});}catch(e){}}else if(Notification.permission==='default'){Notification.requestPermission().then(p=>{if(p==='granted'){try{new Notification(tr(t),{body:tr(b)});}catch(e){}}});}}
+document.addEventListener('click',function(){if('Notification' in window&&Notification.permission==='default')Notification.requestPermission();},{once:true});
+function dealWatch(){const S=STATE;if(!S)return;const st=S.status;const d=S.deal||{};
+if(st==='deal'&&PREV_STATUS!=='deal'){beep(BEEP_DEAL);notify('Deal '+(d.order?'#'+d.order:''),'rate '+(d.rate!=null?d.rate:'--')+' / '+fmtN(d.amount)+' RUB - decide!');LAST_REMIND=Date.now();}
+if(st==='deal'&&PREV_STATUS==='deal'&&Date.now()-LAST_REMIND>=300000){beep(BEEP_REMIND);notify('Still waiting','deal '+(d.order?'#'+d.order:'')+' left '+mmss(d.deadline));LAST_REMIND=Date.now();}
+if(st!=='deal')LAST_REMIND=0;PREV_STATUS=st;}
+async function loadGallery(){try{const r=await fetch(api('/gallery'));const j=await r.json();const box=$('shotsBox');if(!box)return;box.innerHTML='';const items=(j.items||[]).slice(0,6);if(!items.length){box.innerHTML=emptyState('info','no screenshots yet');return;}items.forEach(it=>{const a=document.createElement('div');const u=api(it.url);a.innerHTML='<img src="'+u+'" loading="lazy">';a.onclick=function(){openFull(u);};box.appendChild(a);});}catch(e){}}
+function openFull(url){const ov=$('fullOverlay');$('fullImg').src=url;ov.classList.add('open');}
+
+let HIST_EXTRA=[],CURRENT_HIST=[],CUR_HIST=null;
+function histAll(){return (STATE?(STATE.history||[]):[]).concat(HIST_EXTRA);}
+const TL_LABEL={started:'Offer picked, opening browser',confirmed:'Confirmed in Wallet (draft)',buy_error:'Buy error',recorded:'Recorded in history',waiting:'Waiting your decision'};
+async function loadMore(){const off=histAll().length;const r=await cmd('get_history',{offset:off,limit:20});if(r.ok&&r.items&&r.items.length){HIST_EXTRA=HIST_EXTRA.concat(r.items);renderHistory();toast('+'+r.items.length+' deals loaded');}else toast('all history loaded');}
+async function exportDeals(fmt){const r=await cmd(fmt==='csv'?'export_csv':'export_json');if(r.ok&&r.path){const a=document.createElement('a');a.href=api('/file?path='+encodeURIComponent(r.path));a.download=r.path.split('/').pop();document.body.appendChild(a);a.click();a.remove();toast('download started + sent to bot');}else toast('export failed');}
+function dealCsv(h){if(!h)return;const rows=[['time','day','rate','sum','pay','result','offer','order'],[h.time,h.day,h.rate,h.sum,h.pay,h.res,h.offer||'',h.order||'']];const csv=rows.map(r=>r.join(',')).join('\n');const blob=new Blob([csv],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='deal_'+(h.offer||h.time)+'.csv';a.click();URL.revokeObjectURL(a.href);cmd('send_file',{name:'deal_'+(h.offer||h.time)+'.csv',content:csv});toast('deal csv: download + bot');}
+async function openHist(i){const h=CURRENT_HIST[i];if(!h)return;CUR_HIST=h;$('histTitle').textContent='Deal / '+h.day+' / '+h.rate+' RUB';$('histSub').textContent=h.time+' / '+h.sum+' RUB / '+h.pay+' / '+(h.res==='ok'?'success':'failed');const box=$('histTimeline');box.innerHTML='<div class="sub">loading timeline...</div>';$('histModal').classList.add('open');$('scrim').classList.add('open');haptic('light');i18n();const r=await cmd('timeline',{offer:h.offer});box.innerHTML='';const items=(r.ok&&r.items)?r.items:[];if(!items.length){box.innerHTML=emptyState('info','no timeline data in DB');}items.forEach(it=>{const d=document.createElement('div');d.className='tl '+(it.state==='done'?'done':it.state==='bad'?'bad':'cur');d.innerHTML='<div class="dot">'+(it.state==='done'?icoSvg('ok'):it.state==='bad'?icoSvg('bad'):'<svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>')+'</div><div><div class="t">'+(TL_LABEL[it.key]||it.key)+(it.extra?' - '+it.extra:'')+'</div><div class="s">'+it.t+'</div></div>';box.appendChild(d);});const per=document.createElement('div');per.className='btns';per.innerHTML='<button class="btn ghost" onclick="dealCsv(CUR_HIST)">Deal CSV</button>';box.appendChild(per);}
+
+let PERIOD='day';
+function setPeriod(p,el){PERIOD=p;el.parentNode.querySelectorAll('button').forEach(b=>b.classList.remove('on'));el.classList.add('on');renderStats();haptic('light');}
+function periodDays(){const ds=(STATE&&STATE.days)?STATE.days:[];const now=new Date();const iso=now.toISOString().slice(0,10);if(PERIOD==='day')return ds.filter(d=>d.day===iso);if(PERIOD==='week'){const w=new Date(now.getTime()-6*86400000).toISOString().slice(0,10);return ds.filter(d=>d.day>=w);}return ds.slice();}
+function drawCharts(){const ds=((STATE&&STATE.days)?STATE.days:[]).slice().sort((a,b)=>a.day<b.day?-1:1).slice(-14);const bv=$('chartVolume'),br=$('chartRate');if(!bv||!br)return;const maxV=Math.max.apply(null,ds.map(d=>d.vol||0).concat([1]));let html='';const step=300/Math.max(1,ds.length);ds.forEach((d,i)=>{const x=i*step+2;const w=Math.max(4,step-4);const h=(d.vol||0)/maxV*100;html+='<rect class="cbar" x="'+x.toFixed(1)+'" y="'+(110-h).toFixed(1)+'" width="'+w.toFixed(1)+'" height="'+h.toFixed(1)+'"><title>'+d.day+': '+Math.round(d.vol||0)+' RUB / '+d.ok+' deals</title></rect>';});bv.innerHTML=html||'<text x="10" y="60" fill="#9aa0a6" font-size="12">no data yet</text>';const rates=ds.filter(d=>d.ok&&d.avg_rate);if(rates.length>1){const mn=Math.min.apply(null,rates.map(d=>d.avg_rate)),mx=Math.max.apply(null,rates.map(d=>d.avg_rate)),rg=(mx-mn)||1;const pts=rates.map((d,i)=>{const x=i*(300/(rates.length-1));const y=110-((d.avg_rate-mn)/rg)*100;return x.toFixed(1)+','+y.toFixed(1);}).join(' ');br.innerHTML='<polyline class="cline" points="'+pts+'"/>';}else br.innerHTML='<text x="10" y="60" fill="#9aa0a6" font-size="12">not enough data</text>';}
+
+let LOG_FROZEN=false;
+function toggleFreeze(el){LOG_FROZEN=!LOG_FROZEN;el.textContent=LOG_FROZEN?'Resume':'Freeze';el.classList.toggle('on',LOG_FROZEN);const d=$('liveDot');if(d)d.classList.toggle('frozen',LOG_FROZEN);toast(LOG_FROZEN?'log frozen':'log live again');}
+function downloadLog(){const a=document.createElement('a');a.href=api('/file?path=p2p_bot.log');a.download='p2p_bot.log';document.body.appendChild(a);a.click();a.remove();cmd('log_tg');toast('log download + sent to bot');}
+
+function clearPayLists(){$('setPayWhite').value='';$('setPayBlack').value='';cmd('set_setting',{key:'pay_white',value:''});cmd('set_setting',{key:'pay_black',value:''});toast('all payments allowed');}
+function setDaily(el){el.classList.toggle('on');const on=el.classList.contains('on');cmd('set_setting',{key:'daily_enabled',value:on});toast('daily limits '+(on?'on':'off'));}
+
+function buildDropdown(id,vals,cur,onPick){const box=$(id);if(!box)return;box.innerHTML='';box.classList.remove('open');const btn=document.createElement('button');btn.type='button';btn.className='dd-btn';btn.textContent=cur||'--';const list=document.createElement('div');list.className='dd-list';vals.forEach(v=>{const o=document.createElement('div');o.className='dd-opt'+(v===cur?' on':'');o.textContent=v;o.onclick=function(ev){ev.stopPropagation();onPick(v);buildDropdown(id,vals,v,onPick);};list.appendChild(o);});btn.onclick=function(ev){ev.stopPropagation();box.classList.toggle('open');};box.appendChild(btn);box.appendChild(list);}
+document.addEventListener('click',function(){document.querySelectorAll('.dd.open').forEach(d=>d.classList.remove('open'));});
+
+function reasonText(r){
+  var c=String(r.reason||"");
+  var s=(STATE&&STATE.settings)||{};
+  var amin=s.amount_min, amax=s.amount_max;
+  if(/amount window empty/i.test(c)) return "Сумма не подошла: твой коридор "+(amin!=null?amin:"?")+"–"+(amax!=null?amax:"?")+" RUB не совпал с окном продавца";
+  if(/payment/i.test(c)&&/black/i.test(c)) return "Оплата «"+(r.payment||"?")+"» в чёрном списке";
+  if(/payment/i.test(c)&&/white/i.test(c)) return "Оплата «"+(r.payment||"?")+"» не в белом списке";
+  if(/rate|price/i.test(c)) return "Курс "+(r.price!=null?r.price:"?")+" вне твоего диапазона";
+  if(/daily/i.test(c)&&/amount|sum/i.test(c)) return "Дневной лимит по сумме выбран";
+  if(/daily/i.test(c)&&/deal/i.test(c)) return "Дневной лимит по сделкам выбран";
+  if(/bad|pause/i.test(c)) return "Объявление недавно сорвалось — бот ждёт паузу";
+  return c||"—";
+}
+function closeRej(){var m=document.getElementById('rejModal');if(m)m.remove();}
+function buyRej(id){cmd('buy_by_id',{id:id}).then(function(r){if(r&&r.ok){toast('открываю на '+r.amount+' RUB — подтверди в карточке сделки');closeRej();}else{toast((r&&r.error)||'не удалось');}});}
+function openRej(r){var m=document.getElementById('rejModal');if(!m){m=document.createElement('div');m.id='rejModal';m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:99;display:flex;align-items:flex-end;justify-content:center';m.onclick=function(e){if(e.target===m)closeRej();};document.body.appendChild(m);}var LBL={price:"Цена",seller:"Продавец",payment:"Оплата",min:"Мин суммы",max:"Макс суммы"};var rows="";for(var k in r){if(r[k]==null||r[k]===""||k==="link"||k==="id"||k==="reason")continue;rows+='<div style="display:flex;justify-content:space-between;padding:10px 0"><span style="color:var(--sub)">'+(LBL[k]||k)+'</span><b style="text-align:right;max-width:60%">'+r[k]+'</b></div>';}rows+='<div style="display:flex;justify-content:space-between;padding:10px 0"><span style="color:var(--sub)">Причина</span><b style="text-align:right;max-width:60%;color:var(--yellow)">'+reasonText(r)+'</b></div>';var buy='<button onclick="buyRej(\''+r.id+'\')" style="display:block;width:100%;margin:14px 0 4px;padding:12px;background:var(--green);color:#06281a;border:0;border-radius:16px;font-weight:700;font-size:15px">Купить это объявление</button><div style="color:var(--sub);font-size:11px;text-align:center">сумма = максимум окна объявления; финал рукой (авто-подтверждение выкл)</div>';var lb="";if(r.link)lb='<a href="'+r.link+'" target="_blank" style="display:block;text-align:center;margin:8px 0 4px;padding:12px;background:var(--green);color:#06281a;border-radius:16px;text-decoration:none;font-weight:700">Открыть в Wallet</a>';m.innerHTML='<div style="background:var(--card);width:100%;max-width:520px;border-radius:24px 24px 0 0;padding:18px 16px 24px;max-height:82vh;overflow:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><b style="font-size:16px">Объявление'+(r.id?" #"+r.id:"")+'</b><span onclick="closeRej()" style="cursor:pointer;color:var(--sub);font-size:24px;line-height:1">&times;</span></div>'+rows+buy+lb+'<div style="color:var(--sub);font-size:11px;margin-top:12px">Отсеяно фильтрами — просмотр и ручная покупка</div></div>';}
+function renderRejected(){const box=$('rejList');if(!box)return;const R=(STATE&&STATE.rejected)||[];if(!R.length){box.innerHTML=emptyState('ok','all found offers pass filters now');return;}box.innerHTML='';R.forEach(r=>{const d=document.createElement('div');d.className='act-row';d.style.cursor='pointer';d.onclick=function(){openRej(r);};d.innerHTML='<div class="act-ic warn" style="width:44px;font-size:11px">'+r.price.toFixed(1)+'</div><div class="act-tx">'+r.seller+' / '+r.payment+' / '+(r.min||'?')+'-'+(r.max||'?')+' ₽<span class="tm">'+r.reason+' / id '+r.id+'</span></div>';box.appendChild(d);});}
+
+const TERM_DICT={
+  'Terminal':'Терминал','Deals':'Сделки','Stats':'Статистика','Log':'Логи','Browser':'Браузер',
+  'USDT/RUB rate / last 60 min':'Курс USDT/RUB / последние 60 мин',
+  'Daily limits':'Дневные лимиты','Budget':'Бюджет','Budget left':'Остаток бюджета',
+  'Active deal':'Активная сделка','Rate':'Курс','Amount':'Сумма','Payment':'Оплата','Seller':'Продавец','Stage':'Этап',
+  'Swipe to buy':'Свайп для покупки','CONFIRM ORDER':'ПОДТВЕРДИТЬ ЗАКАЗ','Not taking it':'Не беру','Screenshot':'Скриншот',
+  'Session stats':'Статистика сессии','found':'найдено','opened':'открыто','deals':'сделок','errors':'ошибок','failed':'сорвалось','streak':'серия',
+  'Rejected by filters (rate ok)':'Отклонено фильтрами (курс ок)','Recent activity':'Последняя активность',
+  'today':'сегодня','volume':'объём','success':'успех','All':'Все','Success':'Успешные','Failed':'Сорванные','SBP':'СБП','Card':'Карта',
+  'Load more':'Загрузить ещё','Export CSV':'Экспорт CSV','Export JSON':'Экспорт JSON',
+  'Day':'День','Week':'Неделя','Volume':'Объём','Avg rate':'Средний курс','Best rate':'Лучший курс','Worst rate':'Худший курс','Payment methods':'Способы оплаты',
+  'Errors':'Ошибки','Warnings':'Предупреждения','warnings':'предупр.','Freeze':'Пауза','Export log':'Экспорт лога',
+  'Live browser view':'Экран браузера','Refresh':'Обновить','Save shot':'Снимок','Stealth test':'Стелс-тест',
+  'Settings':'Настройки','applied live, no bot restart':'применяется сразу, без перезапуска',
+  'Appearance':'Оформление','Accent color':'Акцентный цвет','Daily limits enabled':'Дневные лимиты включены',
+  'Daily budget':'Дневной бюджет','Deals per day':'Сделок в день','Rate and amount':'Курс и сумма',
+  'Modes':'Режимы','Auto-buy':'Авто-покупка','Headless (no window)':'Headless (без окна)',
+  'Payments':'Оплата','Allow all payments':'Разрешить все способы','Safety':'Защита',
+  'Device and crypto':'Устройство и крипта','System':'Система','Language':'Язык',
+  'Danger zone':'Опасная зона','Kill browser':'Перезапуск браузера','Reset limits':'Сбросить лимиты',
+  'Open':'Открыть','Show screen':'Показать экран','Waiting':'Ожидание',
+  'DEMO · тестовые данные':'DEMO · тестовые данные'
+};
+const TERM_DICT_REV={};
+Object.keys(TERM_DICT).forEach(function(k){TERM_DICT_REV[TERM_DICT[k]]=k;});
+let TERM_LANG=(new URLSearchParams(location.search).get('lang')==='en')?'en':'ru';
+let TERM_ANIM_GEN=0,TERM_RAF=0;
+function curLang(){return TERM_LANG;}
+function tr(v){if(v==null)return v;var s=String(v);if(TERM_LANG==='ru')return TERM_DICT[s]||s;return TERM_DICT_REV[s]||s;}
+function syncLangUI(){
+  var sw=document.getElementById('langSwitch');
+  if(sw){sw.setAttribute('data-lang',TERM_LANG);sw.querySelectorAll('[data-opt]').forEach(function(o){o.classList.toggle('is-active',o.getAttribute('data-opt')===TERM_LANG);});}
+  document.querySelectorAll('.lang-seg button').forEach(function(b){b.classList.toggle('on',b.dataset.lang===TERM_LANG);});
+  var db=document.getElementById('demoBanner');
+  if(db)db.textContent=TERM_LANG==='en'?'DEMO · mock data':'DEMO · тестовые данные';
+}
+function i18n(animate){
+  syncLangUI();
+  var jobs=[];
+  var walk=function(n){
+    for(var c of Array.from(n.childNodes)){
+      if(c.nodeType===3){
+        var v=c.nodeValue,t=v.trim();
+        if(!t)continue;
+        var next=TERM_LANG==='ru'?TERM_DICT[t]:TERM_DICT_REV[t];
+        if(next&&next!==t){
+          if(animate&&n.nodeType===1&&n.getBoundingClientRect().height>0){jobs.push({node:c,parent:n,target:v.replace(t,next),len:next.length});}
+          else{c.nodeValue=v.replace(t,next);}
+        }
+      }else if(c.nodeType===1&&c.id!=='langSwitch'&&!/SCRIPT|STYLE|INPUT|TEXTAREA|SELECT|SVG/.test(c.tagName)){walk(c);}
+    }
+  };
+  walk(document.body);
+  if(!animate||!jobs.length)return;
+  if(TERM_RAF){cancelAnimationFrame(TERM_RAF);TERM_RAF=0;}
+  document.querySelectorAll('.is-typing').forEach(function(e){e.classList.remove('is-typing');});
+  TERM_ANIM_GEN+=1;var myG=TERM_ANIM_GEN,t0=performance.now();
+  jobs.forEach(function(j,idx){j.delay=Math.min(180,idx*14);j.dur=Math.min(480,200+j.len*10);j.started=false;j.done=false;});
+  function step(now){
+    if(myG!==TERM_ANIM_GEN)return;
+    var elap=now-t0,rem=0;
+    for(var i=0;i<jobs.length;i++){
+      var j=jobs[i];if(j.done)continue;
+      if(elap<j.delay){rem++;continue;}
+      if(!j.started){j.started=true;j.parent.classList.add('is-typing');}
+      var p=Math.min(1,(elap-j.delay)/j.dur);
+      if(p>=1){j.node.nodeValue=j.target;j.parent.classList.remove('is-typing');j.done=true;}
+      else{var ch=Math.max(1,Math.floor(p*j.target.length));j.node.nodeValue=j.target.slice(0,ch);rem++;}
+    }
+    if(rem>0)TERM_RAF=requestAnimationFrame(step);
+  }
+  TERM_RAF=requestAnimationFrame(step);
+}
+function setLang(l,animate){
+  if(l!=='ru'&&l!=='en')return;
+  if(l===TERM_LANG&&animate)return;
+  TERM_LANG=l;
+  i18n(!!animate);
+}
+(function(){
+  var sw=document.getElementById('langSwitch');
+  if(sw)sw.addEventListener('click',function(){setLang(TERM_LANG==='ru'?'en':'ru',true);});
+  window.addEventListener('message',function(ev){if(ev&&ev.data&&ev.data.type==='set-lang')setLang(ev.data.lang,true);});
+  syncLangUI();
+})();
+
+let LOCKED=false;
+function lockScreen(){LOCKED=true;document.body.innerHTML='<div style="padding:60px 24px;text-align:center;font-family:monospace;color:var(--red);font-size:16px">ACCESS DENIED<br><br><span style="color:var(--sub);font-size:12px">This terminal is bound to another owner account.</span></div>';}
+async function authOnce(){try{const tg=window.Telegram&&window.Telegram.WebApp;if(!tg||!tg.initData)return;const r=await fetch('/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({initData:tg.initData})});if(r.status===403){lockScreen();return;}const j=await r.json();if(j.ok&&j.token){sessionStorage.setItem('btok',j.token);}}catch(e){}}
+
+let LIVE_LAST=0;
+function liveViewTick(){const sec=$('tab-browser');if(!sec||sec.classList.contains('hidden'))return;if(Date.now()-LIVE_LAST<4000)return;LIVE_LAST=Date.now();const img=$('liveView');if(img)img.src=api('/file?path=debug/live.png')+'&t='+LIVE_LAST;}
+function refreshLive(){LIVE_LAST=0;liveViewTick();}
+
+function startStream(){const img=$('liveView');if(!img)return;img.onerror=function(){stopStream();liveViewTick();};img.src=api('/stream');}
+function stopStream(){const img=$('liveView');if(img&&String(img.src||'').indexOf('/stream')>=0)img.src='';}
+function runStealth(){toast('running stealth test...');cmd('stealth_test').then(function(r){if(r&&r.ok){const i=r.info||{};$('stealthInfo').textContent='webdriver detected: '+i.webdriver+'\nplugins: '+i.plugins+'\nlanguages: '+i.langs+'\nwindow.chrome: '+i.chrome+'\nheadless UA: '+i.headlessUA+'\nthreads: '+i.concurrency+'\nwebgl: '+i.webgl_renderer+' / '+i.webgl_vendor;openFull(api('/file?path='+r.path));}else{toast((r&&r.error)||'stealth test failed');}});}
+
+function bindSwipe(root,onDone){if(!root)return;const track=root.querySelector('.swipe-track');const thumb=root.querySelector('.swipe-thumb');const fill=root.querySelector('.swipe-fill');let dragging=false,startOffset=0,max=0;function setX(x){max=track.clientWidth-thumb.offsetWidth-6;x=Math.max(0,Math.min(max,x));thumb.style.transform='translateX('+x+'px)';fill.style.width=(x+thumb.offsetWidth+4)+'px';return x;}function reset(){setX(0);root.classList.remove('done');}function clientX(e){return e.touches?e.touches[0].clientX:e.clientX;}function onDown(e){dragging=true;const tr=thumb.getBoundingClientRect();startOffset=clientX(e)-tr.left;e.preventDefault&&e.preventDefault();}function onMove(e){if(!dragging)return;const trackLeft=track.getBoundingClientRect().left;const x=setX(clientX(e)-trackLeft-startOffset);if(x>=max-2)complete();}function onUp(){if(!dragging)return;dragging=false;const m=/translateX\(([-\d.]+)px\)/.exec(thumb.style.transform);const x=m?parseFloat(m[1]):0;if(x<max-2)reset();}function complete(){if(!dragging&&!root.classList.contains('done')){}dragging=false;root.classList.add('done');haptic('success');onDone();setTimeout(reset,900);}thumb.addEventListener('mousedown',onDown);thumb.addEventListener('touchstart',onDown,{passive:true});window.addEventListener('mousemove',onMove);window.addEventListener('touchmove',onMove,{passive:true});window.addEventListener('mouseup',onUp);window.addEventListener('touchend',onUp);}
+bindSwipe(document.querySelector('[data-swipe="buy1"]'),()=>act('buy'));
+bindSwipe(document.querySelector('[data-swipe="buy2"]'),()=>{act('buy');closeAll();});
+
+function applyAccent(hex,rgb){document.documentElement.style.setProperty('--accent',hex);document.documentElement.style.setProperty('--accent-rgb',rgb);try{localStorage.setItem('accent',hex);localStorage.setItem('accent_rgb',rgb);}catch(e){}document.querySelectorAll('.accent-dot').forEach(b=>b.classList.toggle('on',b.dataset.hex===hex));}
+document.querySelectorAll('.accent-dot').forEach(b=>b.addEventListener('click',()=>applyAccent(b.dataset.hex,b.dataset.rgb)));
+(function(){let sa=null,sr=null;try{sa=localStorage.getItem('accent');sr=localStorage.getItem('accent_rgb');}catch(e){}applyAccent(sa||'#81c995',sr||'129,201,149');})();
+
+function sparkPos(e){const svg=$('sparkSvg');const rect=svg.getBoundingClientRect();const cx=e.touches?e.touches[0].clientX:e.clientX;return Math.max(0,Math.min(1,(cx-rect.left)/rect.width));}
+function sparkMove(e){if(!LAST_SERIES||LAST_SERIES.length<2)return;const frac=sparkPos(e);const idx=Math.round(frac*(LAST_SERIES.length-1));const v=LAST_SERIES[idx];const mn=Math.min.apply(null,LAST_SERIES),mx=Math.max.apply(null,LAST_SERIES),rg=(mx-mn)||1;const x=idx*(300/(LAST_SERIES.length-1));const y=46-((v-mn)/rg)*40;const dot=$('sparkDot');dot.setAttribute('cx',x);dot.setAttribute('cy',y);dot.style.display='block';const tip=$('sparkTip');const minsAgo=LAST_SERIES.length-1-idx;tip.style.display='block';tip.style.left=(frac*100)+'%';tip.textContent=v.toFixed(2)+' RUB'+(minsAgo?' · -'+minsAgo+'м':'');}
+function sparkLeave(){const dot=$('sparkDot');if(dot)dot.style.display='none';const tip=$('sparkTip');if(tip)tip.style.display='none';}
+(function(){const sv=$('sparkSvg');if(!sv)return;sv.addEventListener('mousemove',sparkMove);sv.addEventListener('mouseleave',sparkLeave);sv.addEventListener('touchmove',sparkMove,{passive:true});sv.addEventListener('touchend',sparkLeave);})();
+
+const TAB_ORDER=['term','deals','stats','log','browser'];
+function currentTabIndex(){const i=TAB_ORDER.findIndex(t=>{const el=$('tab-'+t);return el&&!el.classList.contains('hidden');});return i<0?0:i;}
+function goTab(idx){const cur=currentTabIndex();idx=Math.max(0,Math.min(TAB_ORDER.length-1,idx));if(idx===cur)return;const btns=document.querySelectorAll('nav button');tab(TAB_ORDER[idx],btns[idx]);}
+function initTabSwipe(){const main=document.querySelector('main');if(!main)return;let sx=0,sy=0,active=false;function skip(target){return !!(target&&target.closest&&target.closest('.spark-card,.chips,.dd,.swipe-buy,.seg,input[type=range],.log,.dd-list'));}function start(x,y,target){if(skip(target)){active=false;return;}sx=x;sy=y;active=true;}function finish(x,y){if(!active)return;active=false;const dx=x-sx,dy=y-sy;if(Math.abs(dx)>70&&Math.abs(dx)>Math.abs(dy)*1.6){goTab(currentTabIndex()+(dx<0?1:-1));}}main.addEventListener('touchstart',function(e){const t=e.touches[0];start(t.clientX,t.clientY,e.target);},{passive:true});main.addEventListener('touchend',function(e){const t=e.changedTouches[0];finish(t.clientX,t.clientY);},{passive:true});let mdown=false;main.addEventListener('mousedown',function(e){mdown=true;start(e.clientX,e.clientY,e.target);});window.addEventListener('mouseup',function(e){if(mdown){mdown=false;finish(e.clientX,e.clientY);}});}
+initTabSwipe();
+
+wireInputs();authOnce().then(function(){poll();});setInterval(poll,2000);initTG();
+
+</script>
+</body>
+</html>

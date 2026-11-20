@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CASE 08 — Дорожная карта разработки Telegram-бота под ключ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F5F2EB;--surface:#fff;--alt:#EAE5DA;--ink:#141619;--muted:#494F57;--line:#D2CCC0;--accent:#C93B17;--ok:#136F43;--blue:#1D4ED8;--wk:#F0ECE2;
+--display:'Unbounded',system-ui,sans-serif;--sans:'Golos Text',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.5}
+button:focus-visible,input:focus-visible,select:focus-visible,.ph:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.top{border-bottom:1px solid var(--ink)}.top-in{max-width:1120px;margin:0 auto;padding:12px 20px;display:flex;gap:16px;justify-content:space-between;flex-wrap:wrap;font:13px var(--mono)}
+.back{color:var(--ink);font-weight:700;text-decoration:none}.back:hover{color:var(--accent)}
+main{max-width:1120px;margin:0 auto;padding:36px 20px}
+h1{font:700 clamp(22px,3.4vw,34px)/1.15 var(--display);letter-spacing:-.02em;margin-bottom:12px}
+.lead{color:var(--muted);max-width:68ch;margin-bottom:20px}
+.ctl{display:flex;gap:18px;flex-wrap:wrap;align-items:end;margin-bottom:16px}
+.ctl label{display:flex;flex-direction:column;gap:4px;font:700 12px var(--mono)}
+.ctl input,.ctl select{font:14px var(--sans);padding:9px 10px;border:1.5px solid var(--ink);border-radius:6px;background:var(--surface)}
+.tot{font:700 14px var(--mono);padding-bottom:10px}
+.cv{background:var(--surface);border:1.5px solid var(--ink);border-radius:12px;overflow-x:auto}
+svg{display:block;min-width:900px;width:100%;height:auto}
+.hd{font:700 12px var(--mono);fill:var(--ink)}.sub{font:11px var(--mono);fill:var(--muted)}
+.ph{cursor:pointer}.ph rect{fill:var(--ink)}.ph.par rect{fill:var(--blue)}.ph.end rect{fill:var(--ok)}
+.ph:hover rect,.ph.sel rect{fill:var(--accent)}.ph text{font:700 12px var(--mono);fill:#fff}
+.lbl{font:600 13px var(--sans);fill:var(--ink)}
+.dep{stroke:var(--muted);stroke-width:1.6;fill:none}
+.today{stroke:var(--accent);stroke-width:2;stroke-dasharray:5 4}.tl{font:700 11px var(--mono);fill:var(--accent)}
+.det{background:var(--surface);border:1.5px solid var(--ink);border-radius:12px;padding:18px;margin-top:18px;max-width:80ch}
+.det h2{font:700 16px var(--display);margin-bottom:6px}.det p{font-size:14.5px;color:var(--muted);margin-bottom:10px}
+.det ul{margin-left:18px;font-size:14px}
+.leg{font:12px var(--mono);color:var(--muted);margin-top:10px}
+.fine{font-size:12.5px;color:var(--muted);max-width:80ch;margin-top:14px}
+footer{max-width:1120px;margin:0 auto;padding:6px 20px 44px;font:12px var(--mono);color:var(--muted)}
+@media print{.ctl{display:none}.cv{overflow:visible}svg{min-width:0}}
+
+    /* RU | EN Tactile Segmented Switch (shared with index.html) */
+    .lang-switch {
+      position: relative;
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      align-items: center;
+      padding: 3px;
+      background: #FFFFFF;
+      border: 1.5px solid #141619;
+      border-radius: 8px;
+      box-shadow: 3px 3px 0 #141619;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      user-select: none;
+      transition: transform 0.14s ease, box-shadow 0.14s ease;
+      flex-shrink: 0;
+      cursor: pointer;
+      appearance: none;
+    }
+    .lang-switch:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 #141619;
+    }
+    .lang-switch:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #141619;
+    }
+    .lang-switch:focus-visible {
+      outline: 3px solid #C93B17;
+      outline-offset: 2px;
+    }
+    .lang-slider {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      left: 3px;
+      width: calc(50% - 6px);
+      background: #141619;
+      border-radius: 5px;
+      pointer-events: none;
+      transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.22s ease;
+      z-index: 1;
+    }
+    .lang-switch[data-lang="en"] .lang-slider {
+      transform: translateX(calc(100% + 6px));
+    }
+    .lang-switch[data-typing="true"] .lang-slider {
+      background: #C93B17;
+    }
+    .lang-sep {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 11px;
+      line-height: 1;
+      color: #D2CCC0;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .lang-opt {
+      position: relative;
+      z-index: 2;
+      padding: 5px 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #494F57;
+      transition: color 0.22s ease;
+      border-radius: 5px;
+      line-height: 1.1;
+      text-align: center;
+    }
+    .lang-opt.is-active {
+      color: #F5F2EB;
+    }
+    .is-typing::after {
+      content: '▍';
+      display: inline;
+      color: #C93B17;
+      margin-left: 1px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-weight: 400;
+      animation: caretBlink 0.42s steps(1) infinite;
+    }
+    @keyframes caretBlink {
+      0%, 58% { opacity: 1; }
+      59%, 100% { opacity: 0.15; }
+    }
+    @media (max-width: 640px) {
+      .lang-opt {
+        padding: 5px 9px;
+        font-size: 11.5px;
+      }
+    }
+    @media print {
+      .lang-switch { display: none !important; }
+    }
+
+.top-right{display:inline-flex;align-items:center;gap:12px;margin-left:auto}
+.top-in{padding:12px 26px;align-items:center}
+@media(max-width:720px){.case-sub-tag{display:none}.top-in{padding:10px 22px}}
+@media(max-width:540px){.case-mid-tag{display:none}}
+
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+<a class="back" href="index.html" data-i18n="back">← Назад в портфолио</a>
+<span class="case-mid-tag" data-i18n="hdr.mid">CASE 08 // Дорожная карта проекта</span>
+<div class="top-right">
+<span class="case-sub-tag" data-i18n="hdr.sub">Gantt + зависимости</span>
+<button type="button" class="lang-switch" id="langSwitch" aria-label="Переключить язык: RU / EN" data-lang="ru"><span class="lang-slider" aria-hidden="true"></span><span class="lang-sep" aria-hidden="true">|</span><span class="lang-opt is-active" data-opt="ru">RU</span><span class="lang-opt" data-opt="en">EN</span></button>
+</div>
+</div></header>
+<main>
+<h1 data-i18n="h1">Бот с оплатой и Mini App: как проходит проект от брифа до передачи</h1>
+<p class="lead" data-i18n="lead">Типовой план для среднего проекта. Выберите дату старта и сложность, график пересчитается. Нажмите на этап, чтобы увидеть, что на выходе и что нужно от заказчика.</p>
+<div class="ctl">
+<label><span data-i18n="ctl.start">Дата старта</span><input type="date" id="st" value="2026-11-23"></label>
+<label><span data-i18n="ctl.cx">Сложность</span><select id="cx"><option value="0.7" data-i18n="cx.s">Простая (×0,7)</option><option value="1" selected data-i18n="cx.m">Средняя (×1)</option><option value="1.6" data-i18n="cx.l">Сложная (×1,6)</option></select></label>
+<span class="tot" id="tot"></span>
+</div>
+<div class="cv"><svg id="g" role="img" aria-label="Диаграмма Ганта этапов проекта"></svg></div>
+<p class="leg" data-i18n="leg">Тёмные блоки — основной путь · синие — параллельная работа · зелёный — финал · линии — зависимости · пунктир — сегодня</p>
+<section class="det" id="det" aria-live="polite"></section>
+<p class="fine" data-i18n="fine">Сроки — ориентир для среднего проекта, а не обещание: на них влияют скорость согласований и готовность доступов. Выходные показаны на оси, но учитываются как рабочее время по договорённости.</p>
+</main>
+<footer data-i18n="foot">Обновлено: 2026-11-20 · учебный шаблон плана</footer>
+<script>
+(function () {
+  'use strict';
+
+  var I18N = {
+    ru: {
+      'doc.title': 'CASE 08 — Дорожная карта разработки Telegram-бота под ключ',
+      'back': '← Назад в портфолио',
+      'hdr.mid': 'CASE 08 // Дорожная карта проекта',
+      'hdr.sub': 'Gantt + зависимости',
+      'h1': 'Бот с оплатой и Mini App: как проходит проект от брифа до передачи',
+      'lead': 'Типовой план для среднего проекта. Выберите дату старта и сложность, график пересчитается. Нажмите на этап, чтобы увидеть, что на выходе и что нужно от заказчика.',
+      'ctl.start': 'Дата старта',
+      'ctl.cx': 'Сложность',
+      'cx.s': 'Простая (×0,7)',
+      'cx.m': 'Средняя (×1)',
+      'cx.l': 'Сложная (×1,6)',
+      'leg': 'Тёмные блоки — основной путь · синие — параллельная работа · зелёный — финал · линии — зависимости · пунктир — сегодня',
+      'fine': 'Сроки — ориентир для среднего проекта, а не обещание: на них влияют скорость согласований и готовность доступов. Выходные показаны на оси, но учитываются как рабочее время по договорённости.',
+      'foot': 'Обновлено: 2026-11-20 · учебный шаблон плана'
+    },
+    en: {
+      'doc.title': 'CASE 08 — Turnkey Telegram Bot Delivery Roadmap (Gantt)',
+      'back': '← Back to portfolio',
+      'hdr.mid': 'CASE 08 // Project Delivery Roadmap',
+      'hdr.sub': 'Gantt + Dependencies',
+      'h1': 'Bot with Payments & Mini App: From Brief to Handover',
+      'lead': 'Typical delivery plan for a mid-size project. Change the start date or complexity to recalculate every milestone live. Click any phase to view deliverables and required client inputs.',
+      'ctl.start': 'Start Date',
+      'ctl.cx': 'Complexity',
+      'cx.s': 'Simple (×0.7)',
+      'cx.m': 'Standard (×1.0)',
+      'cx.l': 'Complex (×1.6)',
+      'leg': 'Dark bars — critical path · blue — parallel track · green — handover · lines — dependencies · dashed — today',
+      'fine': 'Timelines are realistic estimates rather than fixed guarantees — review turnaround and credential readiness affect dates. Weekends are shaded on the axis and scheduled by mutual agreement.',
+      'foot': 'Updated: 2026-11-20 · reference delivery roadmap template'
+    }
+  };
+
+    function createLangEngine(config) {
+      var dictMap = config.dict;
+      var onRender = config.onRender || function () {};
+      var getDynNodes = config.getDynNodes || function () { return []; };
+      var langSwitch = document.getElementById('langSwitch');
+      var langOpts = langSwitch ? langSwitch.querySelectorAll('[data-opt]') : [];
+      var cur = 'ru';
+      var animGen = 0;
+      var rafId = 0;
+      var locked = [];
+
+      function cleanup() {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+        document.querySelectorAll('.is-typing').forEach(function (el) { el.classList.remove('is-typing'); });
+        locked.forEach(function (el) { el.style.minHeight = ''; });
+        locked = [];
+        if (langSwitch) langSwitch.removeAttribute('data-typing');
+      }
+
+      function calcDuration(len) {
+        if (len <= 12) return 220;
+        if (len <= 45) return 300 + (len - 12) * 8;
+        return Math.min(820, 540 + (len - 45) * 1.5);
+      }
+
+      function syncLinks(lang) {
+        document.querySelectorAll('a[href^="index.html"]').forEach(function (a) {
+          a.setAttribute('href', lang === 'en' ? 'index.html?lang=en' : 'index.html');
+        });
+      }
+
+      function apply(lang, animate) {
+        if (lang !== 'ru' && lang !== 'en') return;
+        cleanup();
+        animGen += 1;
+        var myGen = animGen;
+        cur = lang;
+        document.documentElement.lang = lang;
+        if (dictMap[lang] && dictMap[lang]['doc.title']) {
+          document.title = dictMap[lang]['doc.title'];
+        }
+        if (langSwitch) {
+          langSwitch.setAttribute('data-lang', lang);
+          langOpts.forEach(function (opt) {
+            opt.classList.toggle('is-active', opt.getAttribute('data-opt') === lang);
+          });
+        }
+        syncLinks(lang);
+        try {
+          var url = new URL(window.location.href);
+          if (lang === 'en') url.searchParams.set('lang', 'en');
+          else url.searchParams.delete('lang');
+          window.history.replaceState(null, '', url.toString());
+        } catch (e) { /* file:// */ }
+
+        var prevDyn = animate ? getDynNodes().map(function (el) { return el.textContent; }) : [];
+        onRender(lang);
+
+        var dict = dictMap[lang] || {};
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+          var k = el.getAttribute('data-i18n-placeholder');
+          if (typeof dict[k] === 'string') el.setAttribute('placeholder', dict[k]);
+        });
+
+        var jobs = [];
+        document.querySelectorAll('[data-i18n]').forEach(function (el) {
+          var k = el.getAttribute('data-i18n');
+          if (typeof dict[k] === 'string') jobs.push({ el: el, text: dict[k] });
+        });
+
+        var nextDyn = getDynNodes();
+        nextDyn.forEach(function (el, idx) {
+          var targetText = el.textContent;
+          if (animate && typeof prevDyn[idx] === 'string') {
+            el.textContent = prevDyn[idx];
+          }
+          jobs.push({ el: el, text: targetText });
+        });
+
+        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!animate || reduced) {
+          jobs.forEach(function (j) { j.el.textContent = j.text; });
+          return;
+        }
+
+        var vh = window.innerHeight || 800;
+        var blockTags = { H1: 1, H2: 1, H3: 1, P: 1, DIV: 1, TD: 1, TH: 1, DD: 1, LI: 1 };
+        var animJobs = [];
+
+        jobs.forEach(function (j) {
+          if (!j.text) { j.el.textContent = ''; return; }
+          var rect = j.el.getBoundingClientRect();
+          var inView = rect.width > 0 && rect.height > 0 && rect.bottom >= -140 && rect.top <= vh + 140;
+          if (!inView) {
+            j.el.textContent = j.text;
+            return;
+          }
+          if (blockTags[j.el.tagName]) {
+            var h = j.el.offsetHeight;
+            if (h > 0) {
+              j.el.style.minHeight = h + 'px';
+              locked.push(j.el);
+            }
+          }
+          var normTop = Math.max(0, Math.min(1, rect.top / vh));
+          animJobs.push({
+            el: j.el,
+            text: j.text,
+            len: j.text.length,
+            delay: Math.round(normTop * 210),
+            duration: calcDuration(j.text.length),
+            started: false,
+            done: false
+          });
+        });
+
+        if (!animJobs.length) return;
+        if (langSwitch) langSwitch.setAttribute('data-typing', 'true');
+        var startTs = performance.now();
+
+        function tick(now) {
+          if (myGen !== animGen) return;
+          var elapsedAll = now - startTs;
+          var rem = 0;
+          for (var i = 0; i < animJobs.length; i++) {
+            var job = animJobs[i];
+            if (job.done) continue;
+            if (elapsedAll < job.delay) { rem += 1; continue; }
+            if (!job.started) {
+              job.started = true;
+              job.el.classList.add('is-typing');
+              job.el.textContent = '';
+            }
+            var t = elapsedAll - job.delay;
+            var p = Math.min(1, t / job.duration);
+            var eased = 0.65 * p + 0.35 * (1 - (1 - p) * (1 - p));
+            var chars = Math.min(job.len, Math.max(1, Math.floor(eased * job.len)));
+            if (p >= 1) {
+              job.el.textContent = job.text;
+              job.el.classList.remove('is-typing');
+              job.done = true;
+            } else {
+              job.el.textContent = job.text.slice(0, chars);
+              rem += 1;
+            }
+          }
+          if (rem > 0) rafId = requestAnimationFrame(tick);
+          else cleanup();
+        }
+        rafId = requestAnimationFrame(tick);
+      }
+
+      if (langSwitch) {
+        langSwitch.addEventListener('click', function () {
+          apply(cur === 'ru' ? 'en' : 'ru', true);
+        });
+      }
+
+      var initLang = 'ru';
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('lang') === 'en') initLang = 'en';
+      } catch (e) {}
+
+      return {
+        getLang: function () { return cur; },
+        init: function () { apply(initLang, false); },
+        apply: apply
+      };
+    }
+
+
+  var P = [
+    {
+      id: 'brief', d: 0.5, a: [], g: 0,
+      nRu: 'Бриф и ТЗ', nEn: 'Brief & Spec',
+      tRu: 'Фиксируем, что именно должен делать бот.', tEn: 'Lock down exact bot flows, boundaries, and acceptance criteria.',
+      oRu: ['Согласованное ТЗ на 1–2 страницы','Список сценариев пользователя','Смета и срок'],
+      oEn: ['Signed 1–2 page specification','User flow list','Locked estimate & schedule'],
+      cRu: 'Описание задачи, примеры, ответы на вопросы.', cEn: 'Task overview, references, and quick Q&A.'
+    },
+    {
+      id: 'arch', d: 1, a: ['brief'], g: 0,
+      nRu: 'Архитектура и БД', nEn: 'Architecture & DB',
+      tRu: 'Схема данных, состояния диалога, список интеграций.', tEn: 'Database schema, FSM dialogue states, and external API contracts.',
+      oRu: ['Схема БД','Структура проекта','Список внешних сервисов'],
+      oEn: ['SQLite / PG schema','Project layout','Integration checklist'],
+      cRu: 'Доступы к сервисам, которые нужно подключить.', cEn: 'Credentials for any external APIs to connect.'
+    },
+    {
+      id: 'core', d: 2, a: ['arch'], g: 0,
+      nRu: 'Ядро бота', nEn: 'Bot Core',
+      tRu: 'Команды, сценарии, обработка ошибок, админ-команды.', tEn: 'Commands, routers, FSM flows, error handling, and admin controls.',
+      oRu: ['Рабочий бот на тестовом токене','Логи и защита от повторных нажатий'],
+      oEn: ['Working bot on test token','Structured logs & idempotency guards'],
+      cRu: 'Тестовый бот в BotFather.', cEn: 'Test bot token from BotFather.'
+    },
+    {
+      id: 'app', d: 2, a: ['arch'], g: 0.5, par: 1,
+      nRu: 'Mini App / админка', nEn: 'Mini App / Admin',
+      tRu: 'Интерфейс внутри Telegram: каталог, формы, панель управления.', tEn: 'Embedded Telegram UI: storefront, forms, or operator dashboard.',
+      oRu: ['Страницы Mini App','Передача данных в бота','Адаптив под телефон'],
+      oEn: ['Mini App screens','Signed WebApp data bridge','Mobile-first responsive layout'],
+      cRu: 'Тексты, логотип, цвета.', cEn: 'Copy, brand logo, and color preferences.'
+    },
+    {
+      id: 'pay', d: 1, a: ['core'], g: -0.5, par: 1,
+      nRu: 'Платежи', nEn: 'Payments',
+      tRu: 'Подключение выбранного способа оплаты с учётом правил Telegram.', tEn: 'Integrate selected payment rail in compliance with Telegram policies.',
+      oRu: ['Тестовая оплата сквозь весь сценарий','Обработка отказа и возврата'],
+      oEn: ['End-to-end sandbox checkout','Decline, retry & refund handling'],
+      cRu: 'Аккаунт платёжного сервиса.', cEn: 'Merchant account or CryptoBot token.'
+    },
+    {
+      id: 'qa', d: 1, a: ['pay','app'], g: 0,
+      nRu: 'Тесты и ревью', nEn: 'QA & Review',
+      tRu: 'Прогон сценариев, разбор крайних случаев, ревью кода.', tEn: 'End-to-end flow checks, edge-case testing, and final code review.',
+      oRu: ['Чек-лист проверок','Список исправлений'],
+      oEn: ['Verification checklist','Bugfix pass complete'],
+      cRu: 'Приёмка основных сценариев.', cEn: 'Live walkthrough & acceptance sign-off.'
+    },
+    {
+      id: 'dep', d: 0.5, a: ['qa'], g: 0,
+      nRu: 'Деплой на VPS', nEn: 'VPS Deployment',
+      tRu: 'Запуск 24/7 под systemd, автоперезапуск, резервная копия.', tEn: '24/7 systemd service setup, auto-restart, and automated DB backups.',
+      oRu: ['Работающий сервис','Инструкция по перезапуску'],
+      oEn: ['Live production service','Quick ops & restart runbook'],
+      cRu: 'Доступ к серверу или аренда VPS.', cEn: 'SSH access or fresh Ubuntu VPS.'
+    },
+    {
+      id: 'end', d: 1.5, a: ['dep'], g: 0, fin: 1,
+      nRu: 'Передача и поддержка', nEn: 'Handover & Support',
+      tRu: 'Передача исходников и доступов, период наблюдения.', tEn: 'Full source handover, concise docs, and post-launch monitoring window.',
+      oRu: ['Исходный код у заказчика','Краткая документация','Исправление найденных ошибок'],
+      oEn: ['100% source code transferred','Concise README & env guide','Post-launch bugfix window'],
+      cRu: 'Обратная связь по первым дням работы.', cEn: 'Feedback from initial live traffic.'
+    }
+  ];
+
+  var curLang = 'ru';
+  var curPhaseId = 'brief';
+  var NS = 'http://www.w3.org/2000/svg', DAY = 96, LW = 190, TOP = 50, RH = 44;
+  var DN_RU = ['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
+  var DN_EN = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  function el(n, a, p) {
+    var e = document.createElementNS(NS, n);
+    for (var k in a) e.setAttribute(k, a[k]);
+    if (p) p.appendChild(e);
+    return e;
+  }
+
+  function fmtDur(v) {
+    return curLang === 'en' ? v.toFixed(1) : v.toFixed(1).replace('.', ',');
+  }
+
+  function plan(m) {
+    var by = {};
+    P.forEach(function (p) {
+      var s = 0;
+      p.a.forEach(function (x) { s = Math.max(s, by[x].e); });
+      s = Math.max(0, s + p.g * m);
+      p.s = s; p.e = s + p.d * m; by[p.id] = p;
+    });
+    return by;
+  }
+
+  function sel(p) {
+    curPhaseId = p.id;
+    var d = document.getElementById('det');
+    d.replaceChildren();
+    var h = document.createElement('h2');
+    h.textContent = (curLang === 'en' ? p.nEn : p.nRu) + ' · ' + fmtDur(p.e - p.s) + (curLang === 'en' ? ' d' : ' дн.');
+    d.appendChild(h);
+    var t = document.createElement('p');
+    t.textContent = curLang === 'en' ? p.tEn : p.tRu;
+    d.appendChild(t);
+    var h3 = document.createElement('p');
+    h3.textContent = curLang === 'en' ? 'Deliverables:' : 'На выходе:';
+    h3.style.fontWeight = '700';
+    d.appendChild(h3);
+    var u = document.createElement('ul');
+    (curLang === 'en' ? p.oEn : p.oRu).forEach(function (x) {
+      var li = document.createElement('li'); li.textContent = x; u.appendChild(li);
+    });
+    d.appendChild(u);
+    var c = document.createElement('p');
+    c.style.marginTop = '10px';
+    c.textContent = (curLang === 'en' ? 'Needed from client: ' : 'От заказчика: ') + (curLang === 'en' ? p.cEn : p.cRu);
+    d.appendChild(c);
+    Array.prototype.forEach.call(document.querySelectorAll('.ph'), function (g) {
+      g.classList.toggle('sel', g.dataset.id === p.id);
+    });
+  }
+
+  function draw() {
+    var m = +document.getElementById('cx').value, by = plan(m), svg = document.getElementById('g');
+    svg.replaceChildren();
+    var total = Math.max.apply(null, P.map(function (p) { return p.e; }));
+    var n = Math.ceil(total) + 1, W = LW + n * DAY + 10, H = TOP + P.length * RH + 10;
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    var st = new Date(document.getElementById('st').value + 'T00:00:00');
+    var dn = curLang === 'en' ? DN_EN : DN_RU;
+
+    for (var i = 0; i < n; i++) {
+      var dt = new Date(st.getTime() + i * 86400000), wd = dt.getDay(), x = LW + i * DAY;
+      if (wd === 0 || wd === 6) el('rect', { x: x, y: TOP - 8, width: DAY, height: H - TOP + 8, fill: '#F0ECE2' }, svg);
+      el('line', { x1: x, y1: TOP - 8, x2: x, y2: H - 10, stroke: '#D2CCC0' }, svg);
+      el('text', { x: x + 6, y: 20, 'class': 'hd' }, svg).textContent = dn[wd] + ' ' + dt.getDate() + '.' + String(dt.getMonth() + 1).padStart(2, '0');
+    }
+
+    P.forEach(function (p, i) {
+      var y = TOP + i * RH;
+      el('text', { x: 8, y: y + 24, 'class': 'lbl' }, svg).textContent = curLang === 'en' ? p.nEn : p.nRu;
+    });
+
+    P.forEach(function (p, i) {
+      p.a.forEach(function (a) {
+        var q = by[a], y1 = TOP + P.indexOf(q) * RH + 16, y2 = TOP + i * RH + 16, x1 = LW + q.e * DAY, x2 = LW + p.s * DAY;
+        el('path', { 'class': 'dep', d: 'M' + x1 + ' ' + y1 + ' H' + (x1 + 8) + ' V' + y2 + ' H' + x2 }, svg);
+      });
+    });
+
+    P.forEach(function (p, i) {
+      var y = TOP + i * RH;
+      var pName = curLang === 'en' ? p.nEn : p.nRu;
+      var g = el('g', { 'class': 'ph' + (p.par ? ' par' : '') + (p.fin ? ' end' : ''), tabindex: '0', role: 'button', 'data-id': p.id, 'aria-label': pName }, svg);
+      el('rect', { x: LW + p.s * DAY, y: y + 4, width: Math.max(8, (p.e - p.s) * DAY), height: 24, rx: 5 }, g);
+      el('text', { x: LW + p.s * DAY + 8, y: y + 21 }, g).textContent = fmtDur(p.e - p.s) + (curLang === 'en' ? 'd' : ' д');
+      g.addEventListener('click', function () { sel(p); });
+      g.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sel(p); } });
+    });
+
+    var off = (new Date(new Date().toDateString()) - st) / 86400000;
+    if (off >= 0 && off <= n) {
+      var tx = LW + off * DAY;
+      el('line', { x1: tx, y1: TOP - 8, x2: tx, y2: H - 10, 'class': 'today' }, svg);
+      el('text', { x: tx + 4, y: H - 1, 'class': 'tl' }, svg).textContent = curLang === 'en' ? 'today' : 'сегодня';
+    } else {
+      var msg = curLang === 'en'
+        ? (off < 0 ? 'today: before start' : 'today: after finish')
+        : (off < 0 ? 'сегодня: до старта' : 'сегодня: после финиша');
+      el('text', { x: W - 8, y: H - 1, 'class': 'tl', 'text-anchor': 'end' }, svg).textContent = msg;
+    }
+
+    var end = new Date(st.getTime() + Math.ceil(total) * 86400000);
+    var dateStr = end.getDate() + '.' + String(end.getMonth() + 1).padStart(2, '0') + '.' + end.getFullYear();
+    document.getElementById('tot').textContent = curLang === 'en'
+      ? ('Total: ' + fmtDur(total) + 'd, target finish ~' + dateStr)
+      : ('Итого: ' + fmtDur(total) + ' дн., финиш около ' + dateStr);
+
+    var activeP = P.find(function (x) { return x.id === curPhaseId; }) || P[0];
+    sel(activeP);
+  }
+
+  document.getElementById('st').addEventListener('change', draw);
+  document.getElementById('cx').addEventListener('change', draw);
+
+  var langEngine = createLangEngine({
+    dict: I18N,
+    onRender: function (lang) {
+      curLang = lang;
+      draw();
+    },
+    getDynNodes: function () {
+      var nodes = [document.getElementById('tot')];
+      document.getElementById('det').querySelectorAll('h2, p, li').forEach(function (el) { nodes.push(el); });
+      return nodes;
+    }
+  });
+
+  langEngine.init();
+})();
+</script>
+</body>
+</html>

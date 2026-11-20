@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CASE 05 — P2P-терминал: живое демо</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Unbounded:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F5F2EB;--surface:#fff;--alt:#EAE5DA;--ink:#141619;--muted:#494F57;--line:#D2CCC0;--accent:#C93B17;--ok:#136F43;--ok-soft:#E5F5EC;--warn-soft:#FFF4D6;
+--display:'Unbounded',system-ui,sans-serif;--sans:'Golos Text',system-ui,sans-serif;--mono:'JetBrains Mono',ui-monospace,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.55;-webkit-font-smoothing:antialiased}
+a:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.top{border-bottom:1px solid var(--ink);background:var(--bg)}
+.top-in{max-width:1120px;margin:0 auto;padding:12px 20px;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-family:var(--mono);font-size:13px}
+.back{color:var(--ink);font-weight:700;text-decoration:none}.back:hover{color:var(--accent)}
+.wrap{max-width:1120px;margin:0 auto;padding:44px 20px 20px;display:grid;grid-template-columns:1fr 400px;gap:48px;align-items:start}
+h1{font-family:var(--display);font-size:clamp(24px,3.6vw,38px);line-height:1.15;letter-spacing:-.02em;margin-bottom:16px}
+.lead{color:var(--muted);font-size:17px;max-width:58ch;margin-bottom:26px}
+h2{font-family:var(--display);font-size:16px;margin:28px 0 12px}
+.note{background:var(--warn-soft);border:1.5px solid var(--ink);border-radius:10px;padding:14px 16px;font-size:14px;max-width:62ch}
+.note b{font-family:var(--mono);font-size:12px}
+dl{display:grid;grid-template-columns:150px 1fr;border-top:1px solid var(--line);max-width:64ch}
+dt,dd{padding:10px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+dt{font-family:var(--mono);font-size:12.5px;font-weight:700}dd{color:var(--muted)}
+.pipe{font-family:var(--mono);font-size:12.5px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px;overflow-x:auto;white-space:pre;max-width:64ch}
+.stage{position:sticky;top:20px}
+.phone{width:380px;max-width:100%;height:760px;background:#0b0b0c;border-radius:48px;padding:12px;box-shadow:8px 8px 0 var(--alt),0 0 0 2px var(--ink);margin:0 auto}
+.phone iframe{width:100%;height:100%;border:0;border-radius:36px;background:#000;display:block}
+.ctl{display:flex;gap:10px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.btn{font:600 14px var(--sans);padding:10px 16px;border-radius:6px;border:1.5px solid var(--ink);background:var(--surface);color:var(--ink);cursor:pointer;text-decoration:none}
+.btn:hover{background:var(--ink);color:#fff}
+.hint{text-align:center;font-size:12.5px;color:var(--muted);margin-top:12px;font-family:var(--mono)}
+footer{max-width:1120px;margin:0 auto;padding:28px 20px 48px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}.stage{position:static;order:-1}.phone{height:680px}}
+@media(max-width:540px){dl{grid-template-columns:1fr}dt{border-bottom:0;padding-bottom:0}.phone{border-radius:36px;padding:8px}.phone iframe{border-radius:28px}}
+@media print{.stage{display:none}.wrap{display:block}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+
+    /* RU | EN Tactile Segmented Switch (shared with index.html) */
+    .lang-switch {
+      position: relative;
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      align-items: center;
+      padding: 3px;
+      background: #FFFFFF;
+      border: 1.5px solid #141619;
+      border-radius: 8px;
+      box-shadow: 3px 3px 0 #141619;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      user-select: none;
+      transition: transform 0.14s ease, box-shadow 0.14s ease;
+      flex-shrink: 0;
+      cursor: pointer;
+      appearance: none;
+    }
+    .lang-switch:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 #141619;
+    }
+    .lang-switch:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #141619;
+    }
+    .lang-switch:focus-visible {
+      outline: 3px solid #C93B17;
+      outline-offset: 2px;
+    }
+    .lang-slider {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      left: 3px;
+      width: calc(50% - 6px);
+      background: #141619;
+      border-radius: 5px;
+      pointer-events: none;
+      transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.22s ease;
+      z-index: 1;
+    }
+    .lang-switch[data-lang="en"] .lang-slider {
+      transform: translateX(calc(100% + 6px));
+    }
+    .lang-switch[data-typing="true"] .lang-slider {
+      background: #C93B17;
+    }
+    .lang-sep {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 11px;
+      line-height: 1;
+      color: #D2CCC0;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .lang-opt {
+      position: relative;
+      z-index: 2;
+      padding: 5px 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #494F57;
+      transition: color 0.22s ease;
+      border-radius: 5px;
+      line-height: 1.1;
+      text-align: center;
+    }
+    .lang-opt.is-active {
+      color: #F5F2EB;
+    }
+    .is-typing::after {
+      content: '▍';
+      display: inline;
+      color: #C93B17;
+      margin-left: 1px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-weight: 400;
+      animation: caretBlink 0.42s steps(1) infinite;
+    }
+    @keyframes caretBlink {
+      0%, 58% { opacity: 1; }
+      59%, 100% { opacity: 0.15; }
+    }
+    @media (max-width: 640px) {
+      .lang-opt {
+        padding: 5px 9px;
+        font-size: 11.5px;
+      }
+    }
+    @media print {
+      .lang-switch { display: none !important; }
+    }
+
+.top-right{display:inline-flex;align-items:center;gap:12px;margin-left:auto}
+.top-in{padding:12px 26px}
+@media(max-width:720px){.case-sub-tag{display:none}.top-in{padding:10px 22px}}
+@media(max-width:540px){.case-mid-tag{display:none}}
+
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in">
+<a class="back" href="index.html" data-i18n="back">← Назад в портфолио</a>
+<span class="case-mid-tag" data-i18n="hdr.mid">CASE 05 // P2P-терминал для реального рынка</span>
+<div class="top-right">
+<span class="case-sub-tag" data-i18n="hdr.sub">Живое демо в рамке телефона</span>
+<button type="button" class="lang-switch" id="langSwitch" aria-label="Переключить язык: RU / EN" data-lang="ru"><span class="lang-slider" aria-hidden="true"></span><span class="lang-sep" aria-hidden="true">|</span><span class="lang-opt is-active" data-opt="ru">RU</span><span class="lang-opt" data-opt="en">EN</span></button>
+</div>
+</div></header>
+<main class="wrap">
+<section>
+<h1 data-i18n="h1">Терминал управления P2P-ботом: Mini App поверх моста</h1>
+<p class="lead" data-i18n="lead">Рабочий интерфейс, которым я управляю ботом на реальном P2P-рынке: курс в реальном времени, активная сделка, лимиты, история с таймлайном, логи, настройки фильтров. Справа его демо-копия, её можно нажимать.</p>
+<p class="note"><b data-i18n="note.b">ДЕМО-РЕЖИМ.</b> <span data-i18n="note.t">Здесь вместо боевого моста работает встроенная имитация: курс, сделки и история сгенерированы, реальных данных и доступа к рынку нет. Через ~10 секунд появится тестовая сделка: нажмите BUY или FAIL.</span></p>
+<h2 data-i18n="h2.feat">Что умеет терминал</h2>
+<dl>
+<dt data-i18n="f1.k">Мониторинг</dt><dd data-i18n="f1.v">Курс с индикатором изменения, мини-график, статус: мониторинг / пауза / сделка / офлайн.</dd>
+<dt data-i18n="f2.k">Сделка</dt><dd data-i18n="f2.v">Карточка с таймером до дедлайна, продавцом и способом оплаты. Подтверждение BUY / FAIL вручную.</dd>
+<dt data-i18n="f3.k">Лимиты</dt><dd data-i18n="f3.v">Дневной бюджет и число сделок, пауза и остановка при серии ошибок.</dd>
+<dt data-i18n="f4.k">Фильтры</dt><dd data-i18n="f4.v">Диапазон суммы и курса, белый и чёрный списки способов оплаты, отклонённые офферы с причиной.</dd>
+<dt data-i18n="f5.k">История</dt><dd data-i18n="f5.v">Группы по дням, фильтры, таймлайн каждой сделки, экспорт CSV и JSON.</dd>
+<dt data-i18n="f6.k">Логи</dt><dd data-i18n="f6.v">Уровни, фильтры, заморозка потока, копирование строки по тапу.</dd>
+<dt data-i18n="f7.k">Безопасность</dt><dd data-i18n="f7.v">Привязка к Telegram-пользователю, журнал аудита команд, авто-покупка выключена по умолчанию с предупреждением.</dd>
+</dl>
+<h2 data-i18n="h2.arch">Как это устроено</h2>
+<div class="pipe" data-i18n="pipe">Mini App ──poll /state, 2 с──▶ Мост (VPS)
+Mini App ──POST /command────▶ Мост ──▶ браузер ──▶ P2P-площадка
+Мост ──audit-лог / скриншоты──▶ Mini App</div>
+</section>
+<aside class="stage" aria-label="Демо терминала">
+<div class="phone"><iframe id="frame" src="terminal-demo.html" title="P2P-терминал, демо с тестовыми данными" loading="lazy"></iframe></div>
+<div class="ctl">
+<button class="btn" id="reload" type="button" data-i18n="ctl.reload">Перезапустить демо</button>
+<a class="btn" id="openSep" href="terminal-demo.html" target="_blank" rel="noopener" data-i18n="ctl.open">Открыть отдельно</a>
+</div>
+<p class="hint" data-i18n="hint">Вкладки внизу: обзор · история · логи · настройки</p>
+</aside>
+</main>
+<footer data-i18n="foot">Обновлено: 2026-11-20 · данные в демо сгенерированы</footer>
+<script>
+(function () {
+  'use strict';
+
+  var I18N = {
+    ru: {
+      'doc.title': 'CASE 05 — P2P-терминал: живое демо',
+      'back': '← Назад в портфолио',
+      'hdr.mid': 'CASE 05 // P2P-терминал для реального рынка',
+      'hdr.sub': 'Живое демо в рамке телефона',
+      'h1': 'Терминал управления P2P-ботом: Mini App поверх моста',
+      'lead': 'Рабочий интерфейс, которым я управляю ботом на реальном P2P-рынке: курс в реальном времени, активная сделка, лимиты, история с таймлайном, логи, настройки фильтров. Справа его демо-копия, её можно нажимать.',
+      'note.b': 'ДЕМО-РЕЖИМ.',
+      'note.t': 'Здесь вместо боевого моста работает встроенная имитация: курс, сделки и история сгенерированы, реальных данных и доступа к рынку нет. Через ~10 секунд появится тестовая сделка: нажмите BUY или FAIL.',
+      'h2.feat': 'Что умеет терминал',
+      'f1.k': 'Мониторинг',
+      'f1.v': 'Курс с индикатором изменения, мини-график, статус: мониторинг / пауза / сделка / офлайн.',
+      'f2.k': 'Сделка',
+      'f2.v': 'Карточка с таймером до дедлайна, продавцом и способом оплаты. Подтверждение BUY / FAIL вручную.',
+      'f3.k': 'Лимиты',
+      'f3.v': 'Дневной бюджет и число сделок, пауза и остановка при серии ошибок.',
+      'f4.k': 'Фильтры',
+      'f4.v': 'Диапазон суммы и курса, белый и чёрный списки способов оплаты, отклонённые офферы с причиной.',
+      'f5.k': 'История',
+      'f5.v': 'Группы по дням, фильтры, таймлайн каждой сделки, экспорт CSV и JSON.',
+      'f6.k': 'Логи',
+      'f6.v': 'Уровни, фильтры, заморозка потока, копирование строки по тапу.',
+      'f7.k': 'Безопасность',
+      'f7.v': 'Привязка к Telegram-пользователю, журнал аудита команд, авто-покупка выключена по умолчанию с предупреждением.',
+      'h2.arch': 'Как это устроено',
+      'pipe': 'Mini App ──poll /state, 2 с──▶ Мост (VPS)\nMini App ──POST /command────▶ Мост ──▶ браузер ──▶ P2P-площадка\nМост ──audit-лог / скриншоты──▶ Mini App',
+      'ctl.reload': 'Перезапустить демо',
+      'ctl.open': 'Открыть отдельно',
+      'hint': 'Вкладки внизу: обзор · история · логи · настройки',
+      'foot': 'Обновлено: 2026-11-20 · данные в демо сгенерированы'
+    },
+    en: {
+      'doc.title': 'CASE 05 — P2P Bot Terminal: Live Demo',
+      'back': '← Back to portfolio',
+      'hdr.mid': 'CASE 05 // Production P2P Terminal',
+      'hdr.sub': 'Interactive demo in phone frame',
+      'h1': 'P2P Bot Control Terminal: Mini App Over Local Bridge',
+      'lead': 'My production control interface for a live P2P market bot: real-time rate, active deal card, daily limits, deal timeline history, live logs, and filter settings. Try the clickable demo copy on the right.',
+      'note.b': 'DEMO MODE.',
+      'note.t': 'An embedded mock bridge replaces the live server: rates, deals, and history are synthetic with zero market access. A test deal arrives after ~10 seconds — swipe to BUY or tap FAIL.',
+      'h2.feat': 'Key Capabilities',
+      'f1.k': 'Monitoring',
+      'f1.v': 'Live rate with delta badge, interactive sparkline, and status pill: monitoring / paused / deal / offline.',
+      'f2.k': 'Active Deal',
+      'f2.v': 'Countdown timer ring, seller details, payment method, and manual BUY / FAIL confirmation.',
+      'f3.k': 'Limits',
+      'f3.v': 'Daily budget and deal cap, automatic pause and full stop on consecutive errors.',
+      'f4.k': 'Filters',
+      'f4.v': 'Amount and rate corridors, payment white/blacklists, and rejected offers with exact reasons.',
+      'f5.k': 'History',
+      'f5.v': 'Grouped by day, faceted filters, per-deal event timeline, and CSV/JSON export.',
+      'f6.k': 'Logs',
+      'f6.v': 'Severity filters, stream freeze toggle, and tap-to-copy log lines.',
+      'f7.k': 'Security',
+      'f7.v': 'Bound to owner Telegram ID, command audit trail, auto-buy disabled by default with explicit warning.',
+      'h2.arch': 'How It Works',
+      'pipe': 'Mini App ──poll /state, 2s──▶ Bridge (VPS)\nMini App ──POST /command───▶ Bridge ──▶ Browser ──▶ P2P Exchange\nBridge ──audit log / shots──▶ Mini App',
+      'ctl.reload': 'Restart Demo',
+      'ctl.open': 'Open Standalone',
+      'hint': 'Bottom tabs: terminal · deals · stats · logs · settings',
+      'foot': 'Updated: 2026-11-20 · demo runs on generated mock data'
+    }
+  };
+
+    function createLangEngine(config) {
+      var dictMap = config.dict;
+      var onRender = config.onRender || function () {};
+      var getDynNodes = config.getDynNodes || function () { return []; };
+      var langSwitch = document.getElementById('langSwitch');
+      var langOpts = langSwitch ? langSwitch.querySelectorAll('[data-opt]') : [];
+      var cur = 'ru';
+      var animGen = 0;
+      var rafId = 0;
+      var locked = [];
+
+      function cleanup() {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+        document.querySelectorAll('.is-typing').forEach(function (el) { el.classList.remove('is-typing'); });
+        locked.forEach(function (el) { el.style.minHeight = ''; });
+        locked = [];
+        if (langSwitch) langSwitch.removeAttribute('data-typing');
+      }
+
+      function calcDuration(len) {
+        if (len <= 12) return 220;
+        if (len <= 45) return 300 + (len - 12) * 8;
+        return Math.min(820, 540 + (len - 45) * 1.5);
+      }
+
+      function syncLinks(lang) {
+        document.querySelectorAll('a[href^="index.html"]').forEach(function (a) {
+          a.setAttribute('href', lang === 'en' ? 'index.html?lang=en' : 'index.html');
+        });
+      }
+
+      function apply(lang, animate) {
+        if (lang !== 'ru' && lang !== 'en') return;
+        cleanup();
+        animGen += 1;
+        var myGen = animGen;
+        cur = lang;
+        document.documentElement.lang = lang;
+        if (dictMap[lang] && dictMap[lang]['doc.title']) {
+          document.title = dictMap[lang]['doc.title'];
+        }
+        if (langSwitch) {
+          langSwitch.setAttribute('data-lang', lang);
+          langOpts.forEach(function (opt) {
+            opt.classList.toggle('is-active', opt.getAttribute('data-opt') === lang);
+          });
+        }
+        syncLinks(lang);
+        try {
+          var url = new URL(window.location.href);
+          if (lang === 'en') url.searchParams.set('lang', 'en');
+          else url.searchParams.delete('lang');
+          window.history.replaceState(null, '', url.toString());
+        } catch (e) { /* file:// */ }
+
+        var prevDyn = animate ? getDynNodes().map(function (el) { return el.textContent; }) : [];
+        onRender(lang);
+
+        var dict = dictMap[lang] || {};
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+          var k = el.getAttribute('data-i18n-placeholder');
+          if (typeof dict[k] === 'string') el.setAttribute('placeholder', dict[k]);
+        });
+
+        var jobs = [];
+        document.querySelectorAll('[data-i18n]').forEach(function (el) {
+          var k = el.getAttribute('data-i18n');
+          if (typeof dict[k] === 'string') jobs.push({ el: el, text: dict[k] });
+        });
+
+        var nextDyn = getDynNodes();
+        nextDyn.forEach(function (el, idx) {
+          var targetText = el.textContent;
+          if (animate && typeof prevDyn[idx] === 'string') {
+            el.textContent = prevDyn[idx];
+          }
+          jobs.push({ el: el, text: targetText });
+        });
+
+        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!animate || reduced) {
+          jobs.forEach(function (j) { j.el.textContent = j.text; });
+          return;
+        }
+
+        var vh = window.innerHeight || 800;
+        var blockTags = { H1: 1, H2: 1, H3: 1, P: 1, DIV: 1, TD: 1, TH: 1, DD: 1, LI: 1 };
+        var animJobs = [];
+
+        jobs.forEach(function (j) {
+          if (!j.text) { j.el.textContent = ''; return; }
+          var rect = j.el.getBoundingClientRect();
+          var inView = rect.width > 0 && rect.height > 0 && rect.bottom >= -140 && rect.top <= vh + 140;
+          if (!inView) {
+            j.el.textContent = j.text;
+            return;
+          }
+          if (blockTags[j.el.tagName]) {
+            var h = j.el.offsetHeight;
+            if (h > 0) {
+              j.el.style.minHeight = h + 'px';
+              locked.push(j.el);
+            }
+          }
+          var normTop = Math.max(0, Math.min(1, rect.top / vh));
+          animJobs.push({
+            el: j.el,
+            text: j.text,
+            len: j.text.length,
+            delay: Math.round(normTop * 210),
+            duration: calcDuration(j.text.length),
+            started: false,
+            done: false
+          });
+        });
+
+        if (!animJobs.length) return;
+        if (langSwitch) langSwitch.setAttribute('data-typing', 'true');
+        var startTs = performance.now();
+
+        function tick(now) {
+          if (myGen !== animGen) return;
+          var elapsedAll = now - startTs;
+          var rem = 0;
+          for (var i = 0; i < animJobs.length; i++) {
+            var job = animJobs[i];
+            if (job.done) continue;
+            if (elapsedAll < job.delay) { rem += 1; continue; }
+            if (!job.started) {
+              job.started = true;
+              job.el.classList.add('is-typing');
+              job.el.textContent = '';
+            }
+            var t = elapsedAll - job.delay;
+            var p = Math.min(1, t / job.duration);
+            var eased = 0.65 * p + 0.35 * (1 - (1 - p) * (1 - p));
+            var chars = Math.min(job.len, Math.max(1, Math.floor(eased * job.len)));
+            if (p >= 1) {
+              job.el.textContent = job.text;
+              job.el.classList.remove('is-typing');
+              job.done = true;
+            } else {
+              job.el.textContent = job.text.slice(0, chars);
+              rem += 1;
+            }
+          }
+          if (rem > 0) rafId = requestAnimationFrame(tick);
+          else cleanup();
+        }
+        rafId = requestAnimationFrame(tick);
+      }
+
+      if (langSwitch) {
+        langSwitch.addEventListener('click', function () {
+          apply(cur === 'ru' ? 'en' : 'ru', true);
+        });
+      }
+
+      var initLang = 'ru';
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('lang') === 'en') initLang = 'en';
+      } catch (e) {}
+
+      return {
+        getLang: function () { return cur; },
+        init: function () { apply(initLang, false); },
+        apply: apply
+      };
+    }
+
+
+  var frame = document.getElementById('frame');
+  var openSep = document.getElementById('openSep');
+
+  document.getElementById('reload').addEventListener('click', function () {
+    frame.src = frame.getAttribute('src');
+  });
+
+  var langEngine = createLangEngine({
+    dict: I18N,
+    onRender: function (lang) {
+      openSep.setAttribute('href', lang === 'en' ? 'terminal-demo.html?lang=en' : 'terminal-demo.html?lang=ru');
+      try {
+        if (frame.contentWindow) {
+          frame.contentWindow.postMessage({ type: 'set-lang', lang: lang }, '*');
+        }
+      } catch (e) {}
+    }
+  });
+
+  langEngine.init();
+})();
+</script>
+</body>
+</html>

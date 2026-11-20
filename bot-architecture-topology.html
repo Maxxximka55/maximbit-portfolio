@@ -1,0 +1,1024 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CASE 03 — Архитектура и деплой Telegram-бота на VPS • SVG Topology</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F6F8FB;
+      --surface: #FFFFFF;
+      --ink: #0F172A;
+      --muted: #475569;
+      --border: #CBD5E1;
+      --border-strong: #0F172A;
+      --blue: #1D4ED8;
+      --blue-soft: #EFF6FF;
+      --teal: #0F766E;
+      --teal-soft: #F0FDFA;
+      --amber: #B45309;
+      --amber-soft: #FFFBEB;
+      --font-display: 'Unbounded', -apple-system, sans-serif;
+      --font-sans: 'Golos Text', -apple-system, BlinkMacSystemFont, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: var(--font-sans);
+      background-color: var(--bg);
+      background-image:
+        linear-gradient(to right, rgba(15,23,42,0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(15,23,42,0.04) 1px, transparent 1px);
+      background-size: 28px 28px;
+      color: var(--ink);
+      line-height: 1.5;
+    }
+    a:focus-visible, button:focus-visible, [tabindex="0"]:focus-visible {
+      outline: 3px solid var(--blue);
+      outline-offset: 2px;
+    }
+
+    .topbar {
+      background: var(--surface);
+      border-bottom: 1.5px solid var(--border-strong);
+      padding: 12px 20px;
+    }
+    .topbar-inner {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .back-link {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      color: var(--ink);
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .back-link:hover { background: var(--bg); }
+
+    .wrap {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 26px 20px 48px;
+    }
+    .intro {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+    .intro h1 {
+      font-family: var(--font-display);
+      font-size: clamp(20px, 2.8vw, 28px);
+      margin-bottom: 6px;
+    }
+    .intro p { color: var(--muted); max-width: 66ch; font-size: 14.5px; }
+
+    .flow-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    .flow-btn {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 12px;
+      border-radius: 6px;
+      border: 1.5px solid var(--border);
+      background: var(--surface);
+      color: var(--ink);
+      cursor: pointer;
+    }
+    .flow-btn[aria-pressed="true"] {
+      background: var(--ink);
+      color: #FFFFFF;
+      border-color: var(--ink);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.45fr) 370px;
+      gap: 20px;
+      align-items: start;
+    }
+
+    .diagram-card {
+      background: var(--surface);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 16px;
+      overflow-x: auto;
+    }
+
+    svg.arch-svg {
+      width: 100%;
+      min-width: 680px;
+      height: auto;
+      display: block;
+    }
+    .svg-node {
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    .svg-node rect.node-box {
+      fill: #FFFFFF;
+      stroke: #0F172A;
+      stroke-width: 1.6;
+      rx: 8;
+    }
+    .svg-node.selected rect.node-box {
+      stroke: #1D4ED8;
+      stroke-width: 3;
+      fill: #EFF6FF;
+    }
+    .svg-node.dimmed { opacity: 0.28; }
+    .svg-edge { transition: opacity 0.2s ease; }
+    .svg-edge.dimmed { opacity: 0.16; }
+
+    .fo-node {
+      font-family: 'Golos Text', sans-serif;
+      color: #0F172A;
+      padding: 8px 10px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      line-height: 1.25;
+    }
+    .fo-kicker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #1D4ED8;
+      margin-bottom: 3px;
+    }
+    .fo-title {
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+    .fo-sub {
+      font-size: 11px;
+      color: #475569;
+    }
+
+    /* Inspector Sidebar */
+    .inspector {
+      background: var(--surface);
+      border: 1.5px solid var(--border-strong);
+      border-radius: 12px;
+      padding: 20px;
+      position: sticky;
+      top: 20px;
+    }
+    .insp-zone {
+      display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      border: 1px solid rgba(29,78,216,0.3);
+      margin-bottom: 10px;
+    }
+    .inspector h2 {
+      font-family: var(--font-display);
+      font-size: 17px;
+      margin-bottom: 8px;
+    }
+    .insp-desc {
+      font-size: 14px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+    .insp-kv {
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0;
+      margin-bottom: 14px;
+      font-size: 13px;
+    }
+    .insp-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 4px 0;
+    }
+    .insp-row span:first-child { color: var(--muted); font-family: var(--font-mono); font-size: 12px; }
+    .insp-row span:last-child { font-weight: 600; text-align: right; }
+
+    .insp-code-label {
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    pre.insp-code {
+      background: #0F172A;
+      color: #E2E8F0;
+      padding: 12px;
+      border-radius: 8px;
+      font-family: var(--font-mono);
+      font-size: 11.5px;
+      line-height: 1.5;
+      overflow-x: auto;
+    }
+
+    footer {
+      max-width: 1200px;
+      margin: 0 auto 36px;
+      padding: 16px 20px 0;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; }
+      .inspector { position: static; }
+    }
+    @media print {
+      body { background: #FFFFFF; }
+      .topbar, .flow-bar { display: none; }
+      .diagram-card, .inspector { break-inside: avoid; }
+    }
+
+    /* RU | EN Tactile Segmented Switch (shared with index.html) */
+    .lang-switch {
+      position: relative;
+      display: inline-grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      align-items: center;
+      padding: 3px;
+      background: #FFFFFF;
+      border: 1.5px solid #0F172A;
+      border-radius: 8px;
+      box-shadow: 3px 3px 0 #0F172A;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      user-select: none;
+      transition: transform 0.14s ease, box-shadow 0.14s ease;
+      flex-shrink: 0;
+      cursor: pointer;
+      appearance: none;
+    }
+    .lang-switch:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 #0F172A;
+    }
+    .lang-switch:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0 #0F172A;
+    }
+    .lang-switch:focus-visible {
+      outline: 3px solid #1D4ED8;
+      outline-offset: 2px;
+    }
+    .lang-slider {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      left: 3px;
+      width: calc(50% - 6px);
+      background: #0F172A;
+      border-radius: 5px;
+      pointer-events: none;
+      transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.22s ease;
+      z-index: 1;
+    }
+    .lang-switch[data-lang="en"] .lang-slider {
+      transform: translateX(calc(100% + 6px));
+    }
+    .lang-switch[data-typing="true"] .lang-slider {
+      background: #1D4ED8;
+    }
+    .lang-sep {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 11px;
+      line-height: 1;
+      color: #CBD5E1;
+      pointer-events: none;
+      z-index: 1;
+    }
+    .lang-opt {
+      position: relative;
+      z-index: 2;
+      padding: 5px 10px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #475569;
+      transition: color 0.22s ease;
+      border-radius: 5px;
+      line-height: 1.1;
+      text-align: center;
+    }
+    .lang-opt.is-active {
+      color: #F5F2EB;
+    }
+    .is-typing::after {
+      content: '▍';
+      display: inline;
+      color: #1D4ED8;
+      margin-left: 1px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace;
+      font-weight: 400;
+      animation: caretBlink 0.42s steps(1) infinite;
+    }
+    @keyframes caretBlink {
+      0%, 58% { opacity: 1; }
+      59%, 100% { opacity: 0.15; }
+    }
+    @media (max-width: 640px) {
+      .lang-opt {
+        padding: 5px 9px;
+        font-size: 11.5px;
+      }
+    }
+    @media print {
+      .lang-switch { display: none !important; }
+    }
+
+    .topbar-right { display: inline-flex; align-items: center; gap: 12px; margin-left: auto; }
+    .topbar-inner { padding: 0 10px; }
+    @media (max-width: 640px) {
+      .case-id-label { display: none; }
+      .topbar-inner { padding: 0 6px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="back-link" href="index.html" data-i18n="back">← Назад в портфолио</a>
+      <div class="topbar-right">
+        <span class="case-id-label" style="font-family:var(--font-mono);font-size:13px;font-weight:700;">CASE 03 // PRODUCTION BOT TOPOLOGY</span>
+        <button type="button" class="lang-switch" id="langSwitch" aria-label="Переключить язык: RU / EN" data-lang="ru"><span class="lang-slider" aria-hidden="true"></span><span class="lang-sep" aria-hidden="true">|</span><span class="lang-opt is-active" data-opt="ru">RU</span><span class="lang-opt" data-opt="en">EN</span></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="intro">
+      <div>
+        <h1 data-i18n="h1">Топология продакшн-бота на Ubuntu VPS</h1>
+        <p data-i18n="lead">Нажмите на любой узел схемы, чтобы посмотреть стек, обработку сбоев и фрагмент реального конфига. Фильтры сверху подсвечивают конкретные потоки данных.</p>
+      </div>
+    </div>
+
+    <div class="flow-bar" id="flowBar" role="group" aria-label="Подсветка потоков данных"></div>
+
+    <div class="layout">
+      <div class="diagram-card">
+        <svg class="arch-svg" viewBox="0 0 780 540" role="img" aria-label="Схема архитектуры Telegram-бота с зонами сети и потоками данных">
+          <defs>
+            <marker id="arrow-dark" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#0F172A"></path>
+            </marker>
+            <marker id="arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 1 L 10 5 L 0 9 z" fill="#1D4ED8"></path>
+            </marker>
+          </defs>
+
+          <!-- Boundary 1: External Cloud -->
+          <rect x="14" y="14" width="752" height="118" rx="10" fill="#F8FAFC" stroke="#64748B" stroke-width="1.4" stroke-dasharray="6 4"></rect>
+          <text x="28" y="34" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="#334155" data-i18n="svg.zoneA">ZONE A // ВНЕШНИЕ API И ПОЛЬЗОВАТЕЛИ (PUBLIC INTERNET)</text>
+
+          <!-- Boundary 2: VPS Host -->
+          <rect x="14" y="156" width="752" height="368" rx="10" fill="#FFFFFF" stroke="#0F172A" stroke-width="1.8"></rect>
+          <text x="28" y="178" font-family="JetBrains Mono, monospace" font-size="11" font-weight="700" fill="#0F172A" data-i18n="svg.zoneB">ZONE B // UBUNTU 24.04 VPS (UFW: ОТКРЫТЫ ТОЛЬКО 443 И SSH ПО КЛЮЧУ)</text>
+
+          <!-- Sub-boundary: App Runtime -->
+          <rect x="30" y="196" width="460" height="310" rx="8" fill="#F0FDFA" stroke="#0F766E" stroke-width="1.3" stroke-dasharray="4 3"></rect>
+          <text x="44" y="216" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="700" fill="#0F766E">B1 // EDGE + PYTHON RUNTIME</text>
+
+          <!-- Sub-boundary: Storage & Ops -->
+          <rect x="510" y="196" width="240" height="310" rx="8" fill="#FFFBEB" stroke="#B45309" stroke-width="1.3" stroke-dasharray="4 3"></rect>
+          <text x="524" y="216" font-family="JetBrains Mono, monospace" font-size="10.5" font-weight="700" fill="#B45309">B2 // DATA &amp; OPS</text>
+
+          <!-- EDGES -->
+          <g class="svg-edge" data-flows="all order">
+            <line x1="196" y1="84" x2="292" y2="84" stroke="#0F172A" stroke-width="1.8" marker-end="url(#arrow-dark)"></line>
+            <text x="244" y="76" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#0F172A">MTProto</text>
+          </g>
+
+          <g class="svg-edge" data-flows="all order">
+            <line x1="380" y1="120" x2="380" y2="230" stroke="#1D4ED8" stroke-width="2" marker-end="url(#arrow-blue)"></line>
+            <rect x="292" y="136" width="176" height="18" rx="4" fill="#EFF6FF" stroke="#1D4ED8" stroke-width="0.8"></rect>
+            <text x="380" y="149" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" font-weight="600" fill="#1D4ED8">HTTPS Webhook (JSON)</text>
+          </g>
+
+          <g class="svg-edge" data-flows="all payment">
+            <path d="M 632 120 L 632 146 L 430 146 L 430 230" fill="none" stroke="#B45309" stroke-width="1.8" stroke-dasharray="5 3" marker-end="url(#arrow-dark)"></path>
+            <text x="632" y="138" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" font-weight="600" fill="#B45309">IPN Callback</text>
+          </g>
+
+          <g class="svg-edge" data-flows="all order payment">
+            <line x1="260" y1="276" x2="210" y2="276" stroke="#0F172A" stroke-width="1.8" marker-end="url(#arrow-dark)"></line>
+            <text x="235" y="268" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#0F172A">127.0.0.1</text>
+          </g>
+
+          <g class="svg-edge" data-flows="all order payment">
+            <line x1="130" y1="318" x2="130" y2="394" stroke="#0F172A" stroke-width="1.8" marker-end="url(#arrow-dark)"></line>
+            <text x="195" y="362" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#0F172A">async handlers</text>
+          </g>
+
+          <g class="svg-edge" data-flows="all order payment">
+            <line x1="258" y1="436" x2="528" y2="436" stroke="#0F766E" stroke-width="2" marker-end="url(#arrow-dark)"></line>
+            <rect x="330" y="424" width="144" height="18" rx="4" fill="#FFFFFF" stroke="#0F766E" stroke-width="0.8"></rect>
+            <text x="402" y="437" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="10" fill="#0F766E">SQL (WAL / Async)</text>
+          </g>
+
+          <g class="svg-edge" data-flows="all backup">
+            <line x1="630" y1="392" x2="630" y2="318" stroke="#B45309" stroke-width="1.8" marker-end="url(#arrow-dark)"></line>
+            <text x="688" y="360" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="9.5" fill="#B45309">cron .bak</text>
+          </g>
+
+          <!-- NODES -->
+          <g class="svg-node" data-id="client" data-flows="all order" tabindex="0" role="button" aria-label="Client">
+            <rect class="node-box" x="32" y="48" width="164" height="72"></rect>
+            <foreignObject x="32" y="48" width="164" height="72">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="fo-node">
+                <span class="fo-kicker">CLIENT</span>
+                <span class="fo-title">Telegram App</span>
+                <span class="fo-sub" data-i18n="svg.clientSub">Бот + Mini App UI</span>
+              </div>
+            </foreignObject>
+          </g>
+
+          <g class="svg-node" data-id="tgapi" data-flows="all order" tabindex="0" role="button" aria-label="Telegram Bot API">
+            <rect class="node-box" x="294" y="48" width="174" height="72"></rect>
+            <foreignObject x="294" y="48" width="174" height="72">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="fo-node">
+                <span class="fo-kicker">TELEGRAM CLOUD</span>
+                <span class="fo-title">Bot API Gateway</span>
+                <span class="fo-sub">TLS 1.3 + Secret Token</span>
+              </div>
+            </foreignObject>
+          </g>
+
+          <g class="svg-node" data-id="pay" data-flows="all payment" tabindex="0" role="button" aria-label="Payment Gateway">
+            <rect class="node-box" x="542" y="48" width="194" height="72"></rect>
+            <foreignObject x="542" y="48" width="194" height="72">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="fo-node">
+                <span class="fo-kicker">PAYMENT</span>
+                <span class="fo-title" data-i18n="svg.payTitle">ЮKassa / Stars / Crypto</span>
+                <span class="fo-sub" data-i18n="svg.paySub">Подписанный Webhook</span>
+              </div>
+            </foreignObject>
+          </g>
+
+          <g class="svg-node" data-id="nginx" data-flows="all order payment" tabindex="0" role="button" aria-label="Nginx Proxy">
+            <rect class="node-box" x="262" y="232" width="212" height="84"></rect>
+            <foreignObject x="262" y="232" width="212" height="84">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="fo-node">
+                <span class="fo-kicker">EDGE PROXY</span>
+                <span class="fo-title">Nginx + Let's Encrypt</span>
+                <span class="fo-sub" data-i18n="svg.nginxSub">TLS termination, rate limit, статика Mini App</span>
+              </div>
+            </foreignObject>
+          </g>
+
+          <g class="svg-node" data-id="bot" data-flows="all order payment" tabindex="0" role="button" aria-label="aiogram 3 Core">
+            <rect class="node-box" x="46" y="232" width="162" height="84"></rect>
+            <foreignObject x="46" y="232" width="162" height="84">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="fo-node">
+                <span class="fo-kicker">APP ROUTER</span>
+                <span class="fo-title">aiogram 3 Core</span>
+                <span class="fo-sub" data-i18n="svg.botSub">FSM, фильтры, проверка подписи</span>
+              </div>
+            </foreignObject>
+          </g>
+
+          <g class="svg-node" data-id="worker" data-flows="all order payment" tabindex="0" role="button" aria-label="Services">
+            <rect class="node-box" x="46" y="396" width="212" height="84"></rect>
+            <foreignObject x="46" y="396" width="212" height="84">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="fo-node">
+                <span class="fo-kicker">SERVICES</span>
+                <span class="fo-title" data-i18n="svg.workerTitle">Оплата &amp; Автовыдача</span>
+                <span class="fo-sub" data-i18n="svg.workerSub">Идемпотентность заказов, рассылка 20 msg/s</span>
+              </div>
+            </foreignObject>
+          </g>
+
+          <g class="svg-node" data-id="db" data-flows="all order payment backup" tabindex="0" role="button" aria-label="Database">
+            <rect class="node-box" x="530" y="394" width="202" height="86"></rect>
+            <foreignObject x="530" y="394" width="202" height="86">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="fo-node">
+                <span class="fo-kicker">STORAGE</span>
+                <span class="fo-title">SQLite (WAL) / PG</span>
+                <span class="fo-sub" data-i18n="svg.dbSub">Юзеры, заказы, статусы инвойсов</span>
+              </div>
+            </foreignObject>
+          </g>
+
+          <g class="svg-node" data-id="ops" data-flows="all backup" tabindex="0" role="button" aria-label="systemd + Backup">
+            <rect class="node-box" x="530" y="232" width="202" height="84"></rect>
+            <foreignObject x="530" y="232" width="202" height="84">
+              <div xmlns="http://www.w3.org/1999/xhtml" class="fo-node">
+                <span class="fo-kicker">RELIABILITY</span>
+                <span class="fo-title">systemd + Backup</span>
+                <span class="fo-sub" data-i18n="svg.opsSub">Авторестарт 5с, ночной дамп БД в ТГ</span>
+              </div>
+            </foreignObject>
+          </g>
+        </svg>
+      </div>
+
+      <aside class="inspector" aria-live="polite">
+        <span class="insp-zone" id="inspZone">—</span>
+        <h2 id="inspTitle">—</h2>
+        <p class="insp-desc" id="inspDesc">—</p>
+        <div class="insp-kv" id="inspKv"></div>
+        <div class="insp-code-label" id="inspCodeLabel">ФРАГМЕНТ КОНФИГА / КОДА</div>
+        <pre class="insp-code"><code id="inspCode"></code></pre>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    <span>MAXIMBIT // CASE 03 — Inline SVG Systems Architecture</span>
+    <span data-i18n="foot.date">Обновлено: 20.11.2026</span>
+  </footer>
+
+  <script>
+  (function () {
+    'use strict';
+
+    var I18N = {
+      ru: {
+        'doc.title': 'CASE 03 — Архитектура и деплой Telegram-бота на VPS • SVG Topology',
+        'back': '← Назад в портфолио',
+        'h1': 'Топология продакшн-бота на Ubuntu VPS',
+        'lead': 'Нажмите на любой узел схемы, чтобы посмотреть стек, обработку сбоев и фрагмент реального конфига. Фильтры сверху подсвечивают конкретные потоки данных.',
+        'svg.zoneA': 'ZONE A // ВНЕШНИЕ API И ПОЛЬЗОВАТЕЛИ (PUBLIC INTERNET)',
+        'svg.zoneB': 'ZONE B // UBUNTU 24.04 VPS (UFW: ОТКРЫТЫ ТОЛЬКО 443 И SSH ПО КЛЮЧУ)',
+        'svg.clientSub': 'Бот + Mini App UI',
+        'svg.payTitle': 'ЮKassa / Stars / Crypto',
+        'svg.paySub': 'Подписанный Webhook',
+        'svg.nginxSub': 'TLS termination, rate limit, статика Mini App',
+        'svg.botSub': 'FSM, фильтры, проверка подписи',
+        'svg.workerTitle': 'Оплата & Автовыдача',
+        'svg.workerSub': 'Идемпотентность заказов, рассылка 20 msg/s',
+        'svg.dbSub': 'Юзеры, заказы, статусы инвойсов',
+        'svg.opsSub': 'Авторестарт 5с, ночной дамп БД в ТГ',
+        'foot.date': 'Обновлено: 20.11.2026'
+      },
+      en: {
+        'doc.title': 'CASE 03 — Production Telegram Bot Topology on VPS • SVG Architecture',
+        'back': '← Back to portfolio',
+        'h1': 'Production Bot Topology on Ubuntu VPS',
+        'lead': 'Click any node in the diagram to inspect its stack, failure handling, and config snippet. Use the flow filters above to highlight individual data paths.',
+        'svg.zoneA': 'ZONE A // EXTERNAL APIS & CLIENTS (PUBLIC INTERNET)',
+        'svg.zoneB': 'ZONE B // UBUNTU 24.04 VPS (UFW: ONLY PORT 443 & KEY-ONLY SSH OPEN)',
+        'svg.clientSub': 'Bot + Mini App UI',
+        'svg.payTitle': 'YooKassa / Stars / Crypto',
+        'svg.paySub': 'Signed Webhook',
+        'svg.nginxSub': 'TLS termination, rate limit, Mini App static',
+        'svg.botSub': 'FSM, filters, signature verification',
+        'svg.workerTitle': 'Billing & Auto-Delivery',
+        'svg.workerSub': 'Idempotent orders, 20 msg/s broadcasts',
+        'svg.dbSub': 'Users, orders, invoice states',
+        'svg.opsSub': '5s auto-restart, nightly DB dump to TG',
+        'foot.date': 'Updated: 20.11.2026'
+      }
+    };
+
+    function createLangEngine(config) {
+      var dictMap = config.dict;
+      var onRender = config.onRender || function () {};
+      var getDynNodes = config.getDynNodes || function () { return []; };
+      var langSwitch = document.getElementById('langSwitch');
+      var langOpts = langSwitch ? langSwitch.querySelectorAll('[data-opt]') : [];
+      var cur = 'ru';
+      var animGen = 0;
+      var rafId = 0;
+      var locked = [];
+
+      function cleanup() {
+        if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+        document.querySelectorAll('.is-typing').forEach(function (el) { el.classList.remove('is-typing'); });
+        locked.forEach(function (el) { el.style.minHeight = ''; });
+        locked = [];
+        if (langSwitch) langSwitch.removeAttribute('data-typing');
+      }
+
+      function calcDuration(len) {
+        if (len <= 12) return 220;
+        if (len <= 45) return 300 + (len - 12) * 8;
+        return Math.min(820, 540 + (len - 45) * 1.5);
+      }
+
+      function syncLinks(lang) {
+        document.querySelectorAll('a[href^="index.html"]').forEach(function (a) {
+          a.setAttribute('href', lang === 'en' ? 'index.html?lang=en' : 'index.html');
+        });
+      }
+
+      function apply(lang, animate) {
+        if (lang !== 'ru' && lang !== 'en') return;
+        cleanup();
+        animGen += 1;
+        var myGen = animGen;
+        cur = lang;
+        document.documentElement.lang = lang;
+        if (dictMap[lang] && dictMap[lang]['doc.title']) {
+          document.title = dictMap[lang]['doc.title'];
+        }
+        if (langSwitch) {
+          langSwitch.setAttribute('data-lang', lang);
+          langOpts.forEach(function (opt) {
+            opt.classList.toggle('is-active', opt.getAttribute('data-opt') === lang);
+          });
+        }
+        syncLinks(lang);
+        try {
+          var url = new URL(window.location.href);
+          if (lang === 'en') url.searchParams.set('lang', 'en');
+          else url.searchParams.delete('lang');
+          window.history.replaceState(null, '', url.toString());
+        } catch (e) { /* file:// */ }
+
+        var prevDyn = animate ? getDynNodes().map(function (el) { return el.textContent; }) : [];
+        onRender(lang);
+
+        var dict = dictMap[lang] || {};
+        document.querySelectorAll('[data-i18n-placeholder]').forEach(function (el) {
+          var k = el.getAttribute('data-i18n-placeholder');
+          if (typeof dict[k] === 'string') el.setAttribute('placeholder', dict[k]);
+        });
+
+        var jobs = [];
+        document.querySelectorAll('[data-i18n]').forEach(function (el) {
+          var k = el.getAttribute('data-i18n');
+          if (typeof dict[k] === 'string') jobs.push({ el: el, text: dict[k] });
+        });
+
+        var nextDyn = getDynNodes();
+        nextDyn.forEach(function (el, idx) {
+          var targetText = el.textContent;
+          if (animate && typeof prevDyn[idx] === 'string') {
+            el.textContent = prevDyn[idx];
+          }
+          jobs.push({ el: el, text: targetText });
+        });
+
+        var reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (!animate || reduced) {
+          jobs.forEach(function (j) { j.el.textContent = j.text; });
+          return;
+        }
+
+        var vh = window.innerHeight || 800;
+        var blockTags = { H1: 1, H2: 1, H3: 1, P: 1, DIV: 1, TD: 1, TH: 1, DD: 1, LI: 1 };
+        var animJobs = [];
+
+        jobs.forEach(function (j) {
+          if (!j.text) { j.el.textContent = ''; return; }
+          var rect = j.el.getBoundingClientRect();
+          var inView = rect.width > 0 && rect.height > 0 && rect.bottom >= -140 && rect.top <= vh + 140;
+          if (!inView) {
+            j.el.textContent = j.text;
+            return;
+          }
+          if (blockTags[j.el.tagName]) {
+            var h = j.el.offsetHeight;
+            if (h > 0) {
+              j.el.style.minHeight = h + 'px';
+              locked.push(j.el);
+            }
+          }
+          var normTop = Math.max(0, Math.min(1, rect.top / vh));
+          animJobs.push({
+            el: j.el,
+            text: j.text,
+            len: j.text.length,
+            delay: Math.round(normTop * 210),
+            duration: calcDuration(j.text.length),
+            started: false,
+            done: false
+          });
+        });
+
+        if (!animJobs.length) return;
+        if (langSwitch) langSwitch.setAttribute('data-typing', 'true');
+        var startTs = performance.now();
+
+        function tick(now) {
+          if (myGen !== animGen) return;
+          var elapsedAll = now - startTs;
+          var rem = 0;
+          for (var i = 0; i < animJobs.length; i++) {
+            var job = animJobs[i];
+            if (job.done) continue;
+            if (elapsedAll < job.delay) { rem += 1; continue; }
+            if (!job.started) {
+              job.started = true;
+              job.el.classList.add('is-typing');
+              job.el.textContent = '';
+            }
+            var t = elapsedAll - job.delay;
+            var p = Math.min(1, t / job.duration);
+            var eased = 0.65 * p + 0.35 * (1 - (1 - p) * (1 - p));
+            var chars = Math.min(job.len, Math.max(1, Math.floor(eased * job.len)));
+            if (p >= 1) {
+              job.el.textContent = job.text;
+              job.el.classList.remove('is-typing');
+              job.done = true;
+            } else {
+              job.el.textContent = job.text.slice(0, chars);
+              rem += 1;
+            }
+          }
+          if (rem > 0) rafId = requestAnimationFrame(tick);
+          else cleanup();
+        }
+        rafId = requestAnimationFrame(tick);
+      }
+
+      if (langSwitch) {
+        langSwitch.addEventListener('click', function () {
+          apply(cur === 'ru' ? 'en' : 'ru', true);
+        });
+      }
+
+      var initLang = 'ru';
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('lang') === 'en') initLang = 'en';
+      } catch (e) {}
+
+      return {
+        getLang: function () { return cur; },
+        init: function () { apply(initLang, false); },
+        apply: apply
+      };
+    }
+
+
+    var NODES = {
+      client: {
+        zone: 'ZONE A // PUBLIC',
+        ru: {
+          title: 'Клиент в Telegram (Бот + Mini App)',
+          desc: 'Пользователь открывает команды бота или встроенную WebApp-витрину. Данные корзины подписываются Telegram initData (HMAC-SHA256) для защиты от подмены суммы.',
+          kv: [['Протокол', 'HTTPS / WebApp SDK'], ['Валидация', 'HMAC-SHA256 на сервере'], ['Адаптив', 'iOS, Android, Desktop']],
+          codeLabel: 'ПРОВЕРКА INITDATA'
+        },
+        en: {
+          title: 'Telegram Client (Bot + Mini App)',
+          desc: 'User interacts with bot commands or the embedded WebApp storefront. Cart payloads are signed with Telegram initData (HMAC-SHA256) to prevent amount tampering.',
+          kv: [['Protocol', 'HTTPS / WebApp SDK'], ['Validation', 'Server-side HMAC-SHA256'], ['Responsive', 'iOS, Android, Desktop']],
+          codeLabel: 'INITDATA VERIFICATION'
+        },
+        code: 'tg.MainButton.onClick(() => {\n  tg.sendData(JSON.stringify({\n    action: "checkout",\n    items: cartItems\n  }));\n});'
+      },
+      tgapi: {
+        zone: 'ZONE A // TELEGRAM CLOUD',
+        ru: {
+          title: 'Telegram Bot API Gateway',
+          desc: 'Принимает события от пользователей и мгновенно доставляет их на наш VPS через Webhook. Секретный заголовок X-Telegram-Bot-Api-Secret-Token отсекает поддельные запросы.',
+          kv: [['Режим', 'Webhook (или Long Polling)'], ['Задержка', '~35–60 ms'], ['Защита', 'Secret Token Header']],
+          codeLabel: 'РЕГИСТРАЦИЯ WEBHOOK'
+        },
+        en: {
+          title: 'Telegram Bot API Gateway',
+          desc: 'Receives user updates and pushes them to our VPS immediately over HTTPS Webhook. The X-Telegram-Bot-Api-Secret-Token header rejects spoofed requests.',
+          kv: [['Mode', 'Webhook (or Long Polling)'], ['Latency', '~35–60 ms'], ['Security', 'Secret Token Header']],
+          codeLabel: 'WEBHOOK REGISTRATION'
+        },
+        code: 'await bot.set_webhook(\n  url="https://bot.example.ru/wh",\n  secret_token=CFG.WEBHOOK_SECRET,\n  drop_pending_updates=True\n)'
+      },
+      pay: {
+        zone: 'ZONE A // PAYMENT',
+        ru: {
+          title: 'Платёжный шлюз (ЮKassa / Stars / Crypto)',
+          desc: 'Формирует ссылку на оплату и присылает серверный callback при зачислении. Бот проверяет подпись и статус через API до выдачи товара.',
+          kv: [['Методы', 'Карты РФ, СБП, Stars, USDT'], ['Повторный хук', 'Идемпотентная обработка'], ['Таймаут', '6 сек (aiohttp)']],
+          codeLabel: 'ЗАЩИТА ОТ ДВОЙНОЙ ВЫДАЧИ'
+        },
+        en: {
+          title: 'Payment Gateway (YooKassa / Stars / Crypto)',
+          desc: 'Generates checkout links and sends server-to-server IPN callbacks on settlement. The bot verifies signatures and invoice state before fulfilling the order.',
+          kv: [['Methods', 'Cards, SBP, Stars, USDT'], ['Duplicate Hook', 'Idempotent handling'], ['Timeout', '6 sec (aiohttp)']],
+          codeLabel: 'IDEMPOTENT FULFILLMENT'
+        },
+        code: 'if order.status == "paid":\n    return web.Response(text="ok")\nawait mark_paid_and_deliver(order.id)'
+      },
+      nginx: {
+        zone: 'ZONE B1 // EDGE PROXY',
+        ru: {
+          title: 'Nginx + SSL (Let\'s Encrypt)',
+          desc: 'Единственная точка входа на 443 порту. Раздаёт статику Telegram Mini App с кэшированием и проксирует вебхуки на локальный порт 127.0.0.1:8080.',
+          kv: [['Порты наружу', 'Только 443 (TLS 1.3)'], ['Файрвол', 'UFW deny incoming'], ['Rate Limit', '20 req/s per IP']],
+          codeLabel: 'NGINX.CONF'
+        },
+        en: {
+          title: 'Nginx + SSL (Let\'s Encrypt)',
+          desc: 'Single public ingress on port 443. Serves cached Telegram Mini App static assets and reverse-proxies webhooks to localhost 127.0.0.1:8080.',
+          kv: [['Public Ports', '443 only (TLS 1.3)'], ['Firewall', 'UFW deny incoming'], ['Rate Limit', '20 req/s per IP']],
+          codeLabel: 'NGINX.CONF'
+        },
+        code: 'location /wh {\n  proxy_pass http://127.0.0.1:8080;\n  proxy_set_header X-Real-IP $remote_addr;\n}'
+      },
+      bot: {
+        zone: 'ZONE B1 // PYTHON RUNTIME',
+        ru: {
+          title: 'aiogram 3 Core + Middleware',
+          desc: 'Асинхронное ядро на Python 3.11+. Чёткое разделение роутеров (user / admin / payments), антифлуд-мидлварь и централизованное логирование ошибок.',
+          kv: [['Стек', 'Python 3.11 + aiogram 3'], ['ОЗУ на VPS', '~55 MB RAM'], ['Антифлуд', 'ThrottlingMiddleware']],
+          codeLabel: 'ЗАПУСК DISPATCHER'
+        },
+        en: {
+          title: 'aiogram 3 Core + Middleware',
+          desc: 'Async core on Python 3.11+. Clean router separation (user / admin / payments), anti-flood throttling middleware, and centralized error logging.',
+          kv: [['Stack', 'Python 3.11 + aiogram 3'], ['VPS Memory', '~55 MB RAM'], ['Anti-Flood', 'ThrottlingMiddleware']],
+          codeLabel: 'DISPATCHER BOOTSTRAP'
+        },
+        code: 'dp.update.middleware(DbSessionMiddleware(pool))\ndp.include_routers(shop.router, admin.router)\nawait dp.start_polling(bot)'
+      },
+      worker: {
+        zone: 'ZONE B1 // SERVICES',
+        ru: {
+          title: 'Сервис автовыдачи и рассылок',
+          desc: 'Выдаёт цифровой товар, роль или ссылку сразу после подтверждения оплаты. Массовые рассылки идут с контролем лимитов Telegram и отчётом админу.',
+          kv: [['Скорость рассылки', '20 сообщений / сек'], ['Сбой юзера', 'Catch ForbiddenError'], ['Уведомления', 'Мгновенный пуш админу']],
+          codeLabel: 'АВТОВЫДАЧА ЗАКАЗА'
+        },
+        en: {
+          title: 'Auto-Delivery & Broadcast Worker',
+          desc: 'Delivers digital goods, channel invites, or access keys immediately after payment verification. Broadcasts stay within Telegram rate limits with admin reporting.',
+          kv: [['Broadcast Rate', '20 messages / sec'], ['Blocked User', 'Catch ForbiddenError'], ['Admin Alerts', 'Instant push summary']],
+          codeLabel: 'ORDER FULFILLMENT'
+        },
+        code: 'await bot.send_message(\n  order.user_id,\n  f"Payment confirmed! Your access key: {key}"\n)'
+      },
+      db: {
+        zone: 'ZONE B2 // STORAGE',
+        ru: {
+          title: 'SQLite (WAL) или PostgreSQL',
+          desc: 'Для проектов до 50 000 пользователей используется лёгкий SQLite в режиме Write-Ahead Logging (не требует отдельного сервера БД). При росте легко мигрирует в PostgreSQL.',
+          kv: [['Режим', 'PRAGMA journal_mode=WAL'], ['Запросы', '100% параметризованы'], ['Миграции', 'Идемпотентный init.sql']],
+          codeLabel: 'ИНИЦИАЛИЗАЦИЯ WAL'
+        },
+        en: {
+          title: 'SQLite (WAL) or PostgreSQL',
+          desc: 'Projects under 50k users run smoothly on lightweight SQLite in Write-Ahead Logging mode with zero external DB overhead, migrating cleanly to PostgreSQL as traffic grows.',
+          kv: [['Mode', 'PRAGMA journal_mode=WAL'], ['Queries', '100% parameterized'], ['Migrations', 'Idempotent init.sql']],
+          codeLabel: 'WAL INITIALIZATION'
+        },
+        code: 'await db.execute("PRAGMA journal_mode=WAL;")\nawait db.execute("PRAGMA busy_timeout=5000;")\nawait db.execute("PRAGMA foreign_keys=ON;")'
+      },
+      ops: {
+        zone: 'ZONE B2 // RELIABILITY',
+        ru: {
+          title: 'systemd 24/7 + Ночные бэкапы',
+          desc: 'Сервис автоматически стартует после перезагрузки VPS и поднимается за 5 секунд при любой аварии. Каждую ночь cron отправляет резервную копию БД в закрытый админ-чат.',
+          kv: [['Аптайм', '99.9%+'], ['Логи', 'journalctl -u bot'], ['Бэкап БД', 'Ежедневно 03:00 UTC']],
+          codeLabel: 'CRON BACKUP'
+        },
+        en: {
+          title: 'systemd 24/7 + Nightly Backups',
+          desc: 'The service boots automatically on VPS restart and recovers within 5 seconds of any fault. Every night a cron job pushes a consistent SQLite backup to a private admin chat.',
+          kv: [['Uptime', '99.9%+'], ['Logs', 'journalctl -u bot'], ['DB Backup', 'Daily 03:00 UTC']],
+          codeLabel: 'CRON BACKUP'
+        },
+        code: '0 3 * * * sqlite3 /opt/bot/data.db \\\n  ".backup /tmp/bot_$(date +\\%F).db"'
+      }
+    };
+
+    var FLOWS = [
+      { id: 'all', ru: 'Все связи', en: 'All Flows' },
+      { id: 'order', ru: '1. Заказ пользователя', en: '1. User Order' },
+      { id: 'payment', ru: '2. Подтверждение оплаты', en: '2. Payment Callback' },
+      { id: 'backup', ru: '3. Бэкап и отказоустойчивость', en: '3. Backup & Recovery' }
+    ];
+
+    var curLang = 'ru';
+    var activeFlow = 'all';
+    var selectedId = 'bot';
+
+    var flowBar = document.getElementById('flowBar');
+    var svgNodes = document.querySelectorAll('.svg-node');
+    var svgEdges = document.querySelectorAll('.svg-edge');
+
+    function renderInspector(id) {
+      var n = NODES[id] || NODES.bot;
+      var loc = n[curLang] || n.ru;
+      selectedId = id;
+      document.getElementById('inspZone').textContent = n.zone;
+      document.getElementById('inspTitle').textContent = loc.title;
+      document.getElementById('inspDesc').textContent = loc.desc;
+      document.getElementById('inspCodeLabel').textContent = loc.codeLabel;
+      document.getElementById('inspCode').textContent = n.code;
+
+      var kv = document.getElementById('inspKv');
+      kv.replaceChildren();
+      loc.kv.forEach(function (pair) {
+        var row = document.createElement('div');
+        row.className = 'insp-row';
+        var k = document.createElement('span');
+        k.textContent = pair[0];
+        var v = document.createElement('span');
+        v.textContent = pair[1];
+        row.appendChild(k);
+        row.appendChild(v);
+        kv.appendChild(row);
+      });
+
+      svgNodes.forEach(function (el) {
+        el.classList.toggle('selected', el.getAttribute('data-id') === id);
+      });
+    }
+
+    function applyFlow(flowId) {
+      activeFlow = flowId;
+      svgNodes.forEach(function (el) {
+        var list = (el.getAttribute('data-flows') || '').split(' ');
+        el.classList.toggle('dimmed', flowId !== 'all' && list.indexOf(flowId) === -1);
+      });
+      svgEdges.forEach(function (el) {
+        var list = (el.getAttribute('data-flows') || '').split(' ');
+        el.classList.toggle('dimmed', flowId !== 'all' && list.indexOf(flowId) === -1);
+      });
+      renderFlowButtons();
+    }
+
+    function renderFlowButtons() {
+      flowBar.replaceChildren();
+      FLOWS.forEach(function (fl) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'flow-btn';
+        b.setAttribute('aria-pressed', activeFlow === fl.id ? 'true' : 'false');
+        b.textContent = curLang === 'en' ? fl.en : fl.ru;
+        b.addEventListener('click', function () { applyFlow(fl.id); });
+        flowBar.appendChild(b);
+      });
+    }
+
+    svgNodes.forEach(function (el) {
+      var id = el.getAttribute('data-id');
+      el.addEventListener('click', function () { renderInspector(id); });
+      el.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          renderInspector(id);
+        }
+      });
+    });
+
+    var langEngine = createLangEngine({
+      dict: I18N,
+      onRender: function (lang) {
+        curLang = lang;
+        renderFlowButtons();
+        renderInspector(selectedId);
+      },
+      getDynNodes: function () {
+        var nodes = [
+          document.getElementById('inspTitle'),
+          document.getElementById('inspDesc'),
+          document.getElementById('inspCodeLabel')
+        ];
+        flowBar.querySelectorAll('.flow-btn').forEach(function (el) { nodes.push(el); });
+        document.getElementById('inspKv').querySelectorAll('span').forEach(function (el) { nodes.push(el); });
+        return nodes;
+      }
+    });
+
+    langEngine.init();
+  })();
+  </script>
+</body>
+</html>
